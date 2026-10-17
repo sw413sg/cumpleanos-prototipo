@@ -314,10 +314,9 @@ function calendarBody() {
 function screenDetail(id) {
   const p = person(id); if (!p) return screenList();
   const n = daysLeft(p.m, p.d), age = turningAge(p);
-  const giftCount = p.gifts.length;
   let h = `<div class="detail-head">${avatar(p, 'lg')}<h2>${esc(p.name)}</h2><div class="sub">${esc(subtitle(p))}</div></div>`;
-  h += `<div class="stats"><div class="stat"><div class="n ${n === 0 ? 'accent' : ''}">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 0 ? '¡es su cumple!' : n === 1 ? 'día' : 'días'}</div></div><div class="stat"><div class="n">${age ?? '–'}</div><div class="l">${age ? 'años cumple' : 'sin año'}</div></div><div class="stat"><div class="n">${giftCount}</div><div class="l">${giftCount === 1 ? 'regalo' : 'regalos'}</div></div></div>`;
-  h += `<div class="quick"><button data-a="fake" data-msg="Abriría WhatsApp con un saludo armado">${ic('message')}Saludar</button><button data-a="fake" data-msg="Abriría el teléfono para llamar">${ic('phone')}Llamar</button><button data-a="addGift" data-id="${p.id}">${ic('gift')}Regalo</button><button data-a="addIdea" data-id="${p.id}">${ic('bulb')}Idea</button></div>`;
+  h += `<div class="stats"><div class="stat"><div class="n ${n === 0 ? 'accent' : ''}">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 0 ? '¡es su cumple!' : n === 1 ? 'día' : 'días'}</div></div><div class="stat"><div class="n">${age ?? '–'}</div><div class="l">${age ? 'años cumple' : 'sin año'}</div></div></div>`;
+  h += `<div class="quick"><button data-a="fake" data-msg="Abriría WhatsApp con un saludo armado">${ic('message')}Saludar</button><button data-a="fake" data-msg="Abriría el teléfono para llamar">${ic('phone')}Llamar</button><button data-a="addGift" data-id="${p.id}" data-combo="1">${ic('gift')}Regalo</button></div>`;
   if (isRound(age) && S.rem.round) {
     const roundTxt = S.rem.roundBefore === 30 ? '1 mes' : S.rem.roundBefore === 60 ? '2 meses' : '2 semanas';
     h += `<div class="banner"><div class="emoji">🎉</div><div><div class="t">¡Cumple ${age}! Es un cumple redondo</div><div class="s">Te avisamos ${roundTxt} antes para que organices algo grande.</div></div></div>`;
@@ -557,11 +556,13 @@ function giftWarning(p, text) {
 function sheetGift(o) {
   const p = person(o.id), dr = o.draft, isIdea = o.s === 'idea';
   const years = []; for (let y = THIS_YEAR; y >= THIS_YEAR - 8; y--) years.push(y);
-  let h = section(`<div class="row"><input class="field" id="giftWhat" placeholder="${isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica'}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: isIdea ? 'Idea' : 'Qué le regalaste' });
+  // Desde el botón Regalo del detalle: un solo lugar para regalo ya hecho o idea
+  let h = o.combo ? `<div class="segmented"><button class="${isIdea ? '' : 'sel'}" data-a="giftKind" data-v="gift">Ya se lo regalé</button><button class="${isIdea ? 'sel' : ''}" data-a="giftKind" data-v="idea">Idea${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>` : '';
+  h += section(`<div class="row"><input class="field" id="giftWhat" placeholder="${isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica'}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: isIdea ? 'Idea' : 'Qué le regalaste' });
   if (!isIdea) h += section(`<label class="row"><span class="grow">Año</span><select id="giftYear" style="border:0;background:transparent;color:var(--label2);font-size:17px;text-align:right">${years.map(y => `<option ${y === dr.year ? 'selected' : ''}>${y}</option>`).join('')}</select>${chev()}</label>`);
   else h += section(`<div class="row"><input class="field" placeholder="Link (opcional)" autocomplete="off"></div>`, { footer: 'Tip: desde Safari o Mercado Libre tocá Compartir → Unforgettables y se guarda solo.' });
   if (p.gifts.length) h += section(p.gifts.map(g => `<div class="row"><span class="grow">${esc(g.what)}</span><span class="value">${g.year}</span></div>`).join(''), { header: `Ya le regalaste a ${esc(p.name.split(' ')[0])}` });
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: o.combo ? 'Regalo' : isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
 }
 function sheetGusto(o) {
   const p = person(o.id);
@@ -729,7 +730,8 @@ const A = {
   askDelete() { const o = topOverlay(); S.dialog = { type: 'confirm', title: `¿Eliminar a ${esc(o.draft.name || 'esta persona')}?`, actions: [{ label: 'Eliminar', a: 'doDelete', destructive: true }], fresh: true }; render(); },
   doDelete() { const o = topOverlay(); S.people = S.people.filter(p => p.id !== o.id); S.dialog = null; S.overlays.pop(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Persona eliminada', '🗑️'); },
   dialogCancel() { S.dialog = null; render(); },
-  addGift(d) { present({ s: 'gift', id: d.id, draft: { what: '', year: THIS_YEAR } }); },
+  addGift(d) { present({ s: 'gift', id: d.id, combo: !!d.combo, draft: { what: '', year: THIS_YEAR } }); },
+  giftKind(d) { if (d.v === 'idea' && needUnlock('ideas')) return; const o = topOverlay(); o.s = d.v; o.draft = { what: o.draft.what, year: o.draft.year || THIS_YEAR }; render(); },
   addIdea(d) { if (needUnlock('ideas')) return; present({ s: 'idea', id: d.id, draft: { what: '' } }); },
   giftSave() {
     const o = topOverlay(), p = person(o.id), what = o.draft.what.trim(); if (!what) return;

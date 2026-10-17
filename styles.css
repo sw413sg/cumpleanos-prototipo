@@ -396,3 +396,4 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .ed-photo { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--accent); font-size: 12px; }
 .ed-photo .avatar { width: 52px; height: 52px; font-size: 20px; }
 .ed-head .field { font-size: 19px; }
+.hero .t1, .hero .t2, .hero .t3 { text-shadow: 0 1px 6px rgba(0,0,0,.35), 0 0 2px rgba(0,0,0,.25); }

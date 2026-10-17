@@ -144,7 +144,6 @@ function gustoMatch(g) {
   const names = ([w, syn]) => [gNorm(w), ...gNorm(syn).split('|')];
   return GUSTO_LIST.find(e => names(e).includes(n)) || GUSTO_LIST.find(e => names(e).some(x => words.includes(x) || x.split(/\s+/).includes(n)));
 }
-const priceLabel = k => `ARS ${k}.000`;
 // Presupuesto de las sugerencias, en miles de pesos
 const BUDGETS = [['all', 'Todos', 0, 1e9], ['low', 'Hasta 20 mil', 0, 20], ['mid', '20 a 50 mil', 21, 50], ['high', 'Más de 50 mil', 51, 1e9]];
 // Sugerencias: las ideas de cada gusto, intercaladas (y arrancando en precios distintos) para que no salgan todas iguales. [idea, gusto, precio]
@@ -346,7 +345,7 @@ function giftBox(p) {
     const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w) && !p.gifts.some(g => similar(g.what, w))).slice(0, 2);
     h += `<div class="gb-block">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', 'Guardá lo que se te ocurra, o una de las sugeridas.')}
       ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(i.what)}<div class="s">${esc(i.src || 'Idea guardada')}</div></span></div>`).join('')}
-      ${sug.map(([w, why, k]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}${k ? ` · ${priceLabel(k)}` : ''}</div></span><button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
+      ${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span><button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
       <div class="gb-actions">${add('addIdea', 'Idea')}<button class="gb-link" data-a="suggest" data-id="${p.id}">Ver más sugerencias${chev()}</button></div></div>`;
   } else {
     h += `<button class="gb-block gb-locked" data-a="paywall" data-f="ideas">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', `Guardá ideas y recibí sugerencias según lo que le gusta a ${first}.`, lockBadge())}</button>`;
@@ -395,10 +394,10 @@ function screenSuggest(id) {
   const p = person(id);
   const list = suggestionsFor(p, S.budget);
   const given = p.gifts.map(g => g.what.toLowerCase());
-  const rows = list.map(([what, why, price], i) => {
+  const rows = list.map(([what, why]) => {
     const prev = p.gifts.find(g => similar(g.what, what));
     const savedIdea = p.ideas.some(x => x.what === what);
-    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}${price ? ` · ${priceLabel(price)}` : ''}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
+    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
   const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` +
     `<div class="chips" style="padding:0 16px 14px">${BUDGETS.map(([k, t]) => `<button class="chip ${S.budget === k ? 'sel' : ''}" data-a="budget" data-v="${k}">${t}</button>`).join('')}</div>` +

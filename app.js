@@ -125,6 +125,9 @@ const CONTACTS = [
   { id: 'c4', name: 'Tío Carlos', n: 58, y: 1966 }, { id: 'c5', name: 'Lucía Herrera', n: 96, y: 2001, photo: true }, { id: 'c6', name: 'Teo Ruiz', dup: true },
   { id: 'c7', name: 'Gonza Acosta', n: 171, y: 1992 }, { id: 'c8', name: 'Vicky Molina', n: 244, y: 1997 }, { id: 'c9', name: 'Ramiro Paz', n: 301 },
 ].map(c => { if (c.dup) { const pp = demoPeople().find(p => p.name === c.name); return { ...c, m: pp.m, d: pp.d, y: pp.y }; } const [m, d] = rel(c.n); return { ...c, m, d }; });
+// La agenda completa: muchos contactos no tienen cumpleaños cargado y se lo asignás al agregarlos
+const AGENDA = [...CONTACTS, { id: 'n1', name: 'Agus Ferreyra', photo: true }, { id: 'n2', name: 'Caro Méndez' }, { id: 'n3', name: 'Juli Sosa' }, { id: 'n4', name: 'Mati Quiroga', photo: true }, { id: 'n5', name: 'Pili Ortega' }]
+  .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
 const SUGGESTIONS = {
   _default: ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'],
@@ -499,27 +502,29 @@ function sheetEditor(o) {
 function sheetImport(o) {
   if (o.rows) return sheetBulkReview(o);
   const dupe = c => S.people.some(p => p.name === c.name);
-  const sel = o.sel; const selectable = CONTACTS.filter(c => !dupe(c));
+  const sel = o.sel; const selectable = AGENDA.filter(c => !dupe(c));
   const all = selectable.length && selectable.every(c => sel.has(c.id));
-  const rows = CONTACTS.map(c => {
+  const rows = AGENDA.map(c => {
     const d = dupe(c), on = sel.has(c.id);
-    return `<button class="row" data-a="impToggle" data-id="${c.id}" ${d ? 'disabled style="opacity:.55"' : ''}><span style="color:${on && !d ? 'var(--accent)' : 'var(--label3)'}">${ic(d ? 'minusCircle' : on ? 'checkCircle' : 'circle', 'check', 1.6).replace('class="check"', 'class="check" style="width:24px;height:24px"')}</span><span class="grow"><div>${esc(c.name)}</div><div class="sub">${esc(subtitle(c))}</div></span>${d ? '<span class="small muted">Ya está</span>' : ''}</button>`;
+    return `<button class="row" data-a="impToggle" data-id="${c.id}" ${d ? 'disabled style="opacity:.55"' : ''}><span style="color:${on && !d ? 'var(--accent)' : 'var(--label3)'}">${ic(d ? 'minusCircle' : on ? 'checkCircle' : 'circle', 'check', 1.6).replace('class="check"', 'class="check" style="width:24px;height:24px"')}</span><span class="grow"><div>${esc(c.name)}</div><div class="sub">${c.m ? esc(subtitle(c)) : 'Sin cumpleaños: lo elegís en el paso siguiente'}</div></span>${d ? '<span class="small muted">Ya está</span>' : ''}</button>`;
   }).join('');
   const n = sel.size;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Importar', right: `<button class="navbtn bold" data-a="impNext" ${n ? '' : 'disabled'}>${n ? `Siguiente (${n})` : 'Siguiente'}</button>` }) +
-    `<div class="scroll">${section(rows, { header: `${CONTACTS.length} con cumpleaños`, footer: 'Los que ya están en la app, o repetidos, quedan deshabilitados.' })}</div><div style="padding:10px 16px calc(var(--safe-bottom) + 8px);border-top:.5px solid var(--sep);background:var(--bar);text-align:center"><button class="navbtn" data-a="impAll">${all ? 'Quitar selección' : 'Seleccionar todos'}</button></div>`);
+    `<div class="scroll">${section(rows, { header: `${AGENDA.length} contactos`, footer: 'Los que ya están en la app quedan deshabilitados.' })}</div><div style="padding:10px 16px calc(var(--safe-bottom) + 8px);border-top:.5px solid var(--sep);background:var(--bar);text-align:center"><button class="navbtn" data-a="impAll">${all ? 'Quitar selección' : 'Seleccionar todos'}</button></div>`);
 }
 
+const rowOk = r => r.name.trim() && r.m && r.d;
 function sheetBulkReview(o) {
   const yrs = []; for (let y = THIS_YEAR; y >= 1900; y--) yrs.push(y);
+  const ph = (t, cur) => cur ? '' : `<option value="" selected disabled>${t}</option>`;
   const opts = (vals, cur, fmt = v => v) => vals.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${fmt(v)}</option>`).join('');
   const rows = o.rows.map(r => `<div class="row bulk-row">${avatar(r)}<div class="grow"><input class="field bulk-name" data-id="${r.id}" value="${esc(r.name)}" placeholder="Nombre" autocomplete="off" autocapitalize="words"><div class="bulk-date">
-    <select data-bulk="d" data-id="${r.id}">${opts(Array.from({ length: daysIn(r.m, r.y) }, (_, i) => i + 1), r.d)}</select>
-    <select data-bulk="m" data-id="${r.id}">${opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], r.m, v => cap(MONTHS[v - 1]))}</select>
+    <select data-bulk="d" data-id="${r.id}" class="${r.d ? '' : 'empty'}">${ph('Día', r.d)}${opts(Array.from({ length: r.m ? daysIn(r.m, r.y) : 31 }, (_, i) => i + 1), r.d)}</select>
+    <select data-bulk="m" data-id="${r.id}" class="${r.m ? '' : 'empty'}">${ph('Mes', r.m)}${opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], r.m, v => cap(MONTHS[v - 1]))}</select>
     <select data-bulk="y" data-id="${r.id}"><option value="" ${r.y ? '' : 'selected'}>Sin año</option>${opts(yrs, r.y)}</select></div></div></div>`).join('');
-  const ok = o.rows.every(r => r.name.trim());
+  const ok = o.rows.every(rowOk), falta = o.rows.filter(r => !r.m || !r.d).length;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="impBack">Atrás</button>`, title: 'Revisar', right: `<button class="navbtn bold" id="saveBtn" data-a="impAdd" ${ok ? '' : 'disabled'}>Agregar (${o.rows.length})</button>` }) +
-    `<div class="scroll">${section(rows, { header: 'Nombre y fecha', footer: 'Dejá el nombre del contacto o cambialo por cómo le decís vos. El año es opcional: sin año no mostramos la edad.' })}</div>`);
+    `<div class="scroll">${section(rows, { header: 'Nombre y fecha', footer: (falta ? `Falta elegir el cumple de ${falta} ${falta === 1 ? 'contacto' : 'contactos'}. ` : '') + 'Dejá el nombre del contacto o cambialo por cómo le decís vos. El año es opcional: sin año no mostramos la edad.' })}</div>`);
 }
 
 function giftWarning(p, text) {
@@ -669,9 +674,9 @@ const A = {
   edit(d) { openEditor(d.id); },
   import() { present({ s: 'import', sel: new Set() }); },
   impToggle(d) { const o = topOverlay(); o.sel.has(d.id) ? o.sel.delete(d.id) : o.sel.add(d.id); render(); },
-  impAll() { const o = topOverlay(); const selectable = CONTACTS.filter(c => !S.people.some(p => p.name === c.name)); const all = selectable.every(c => o.sel.has(c.id)); o.sel = all ? new Set() : new Set(selectable.map(c => c.id)); render(); },
+  impAll() { const o = topOverlay(); const selectable = AGENDA.filter(c => !S.people.some(p => p.name === c.name)); const all = selectable.every(c => o.sel.has(c.id)); o.sel = all ? new Set() : new Set(selectable.map(c => c.id)); render(); },
   bulkAdd() { S.overlays.pop(); present({ s: 'import', sel: new Set() }); },
-  impNext() { const o = topOverlay(); o.rows = CONTACTS.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m, d: c.d, y: c.y || null, photo: !!c.photo })); render(); },
+  impNext() { const o = topOverlay(); o.rows = AGENDA.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m || null, d: c.d || null, y: c.y || null, photo: !!c.photo })); render(); },
   impBack() { delete topOverlay().rows; render(); },
   impAdd() { const o = topOverlay(); let n = 0; for (const r of o.rows) { if (S.people.some(p => p.name === r.name.trim())) continue; S.people.push({ id: 'imp-' + r.id, name: r.name.trim(), m: r.m, d: r.d, y: r.y, gustos: [], gifts: [], ideas: [], notes: '', work: false, tz: null, remind: null, photo: r.photo }); n++; } S.overlays.pop(); persist(); toast(`Agregaste ${n} cumpleaños`, '🎉'); },
   edYear() { const dr = topOverlay().draft; dr.includeYear = !dr.includeYear; render(); },
@@ -747,13 +752,13 @@ phone.addEventListener('input', e => {
   if (t.id === 'edNotes') { o.draft.notes = t.value; return; }
   if (t.id === 'giftWhat') { o.draft.what = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); document.getElementById('giftWarn').innerHTML = giftWarning(person(o.id), t.value); return; }
   if (t.id === 'gustoText') { o.text = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
-  if (t.classList.contains('bulk-name')) { o.rows.find(r => r.id === t.dataset.id).name = t.value; document.getElementById('saveBtn').disabled = !o.rows.every(r => r.name.trim()); return; }
+  if (t.classList.contains('bulk-name')) { o.rows.find(r => r.id === t.dataset.id).name = t.value; document.getElementById('saveBtn').disabled = !o.rows.every(rowOk); return; }
   if (t.id === 'specName') { o.draft.name = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
 });
 phone.addEventListener('change', e => {
   const t = e.target, o = topOverlay();
   if (t.id === 'giftYear') o.draft.year = +t.value;
-  if (t.dataset.bulk) { const r = o.rows.find(x => x.id === t.dataset.id); r[t.dataset.bulk] = t.value ? +t.value : null; r.d = Math.min(r.d, daysIn(r.m, r.y)); render(); }
+  if (t.dataset.bulk) { const r = o.rows.find(x => x.id === t.dataset.id); r[t.dataset.bulk] = t.value ? +t.value : null; if (r.d && r.m) r.d = Math.min(r.d, daysIn(r.m, r.y)); render(); }
   if (t.id === 'remTime') { S.rem.time = t.value || '09:00'; persist(); render(); }
 });
 let wheelT;

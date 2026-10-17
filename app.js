@@ -158,7 +158,7 @@ const S = {
   tab: 'list',
   stacks: { list: [{ s: 'list' }], gifts: [{ s: 'gifts' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
-  search: '', listMode: 'all', giftsMode: 'history',
+  search: '', listMode: 'all', giftsMode: 'history', widgetsMode: 'home',
   listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
@@ -196,13 +196,17 @@ const toggle = (on, a, extra = '') => `<button class="toggle ${on ? 'on' : ''}" 
 function navRow({ icon, color, title, value = '', a, extra = '', badge = '', sub = '' }) {
   return `<button class="row ${icon ? 'has-icon' : ''}" data-a="${a}" ${extra}>${icon ? `<span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span>` : ''}<span class="grow">${title}${sub ? `<div class="sub">${sub}</div>` : ''}</span>${badge}${value ? `<span class="value">${value}</span>` : ''}${chev()}</button>`;
 }
-function countdown(n) {
-  if (n === 0) return `<div class="countdown today">Hoy</div>`;
-  // Desde 2 meses completos, se muestra en meses: "+2 meses", "+3 meses"…
+// [número, unidad] de lo que falta. Desde 2 meses completos, en meses: "+2 meses", "+3 meses"…
+function countParts(n) {
   const t = new Date(TODAY); t.setDate(t.getDate() + n);
   const months = (t.getFullYear() - TODAY.getFullYear()) * 12 + t.getMonth() - TODAY.getMonth() - (t.getDate() < TODAY.getDate() ? 1 : 0);
-  if (months >= 2) return `<div class="countdown"><div class="n">+${months}</div><div class="u">meses</div></div>`;
-  return `<div class="countdown"><div class="n">${n}</div><div class="u">${n === 1 ? 'día' : 'días'}</div></div>`;
+  if (months >= 2) return [`+${months}`, 'meses'];
+  return [String(n), n === 1 ? 'día' : 'días'];
+}
+function countdown(n) {
+  if (n === 0) return `<div class="countdown today">Hoy</div>`;
+  const [a, u] = countParts(n);
+  return `<div class="countdown"><div class="n">${a}</div><div class="u">${u}</div></div>`;
 }
 // Ícono de la fila en la lista: círculo con torta (cumpleaños) o corazón (fecha especial)
 const HEART_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.5s-7.8-4.7-7.8-10.6A4.4 4.4 0 0112 7.2a4.4 4.4 0 017.8 2.7c0 5.9-7.8 10.6-7.8 10.6z"/></svg>';
@@ -401,34 +405,95 @@ function screenGifts() {
 }
 
 /* ---------------- Pantallas: Widgets ---------------- */
-const THEMES = [['classic', 'Clásico', 'var(--cell)'], ['sunset', 'Atardecer', 'linear-gradient(160deg,#ff9a8b,#ff6a88)'], ['mint', 'Menta', 'linear-gradient(160deg,#43e97b,#38f9d7)'], ['night', 'Noche', 'linear-gradient(160deg,#141e30,#243b55)']];
-function nextPeople(k = 3) { return [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).slice(0, k); }
-function widgetSmall(theme = '') {
-  const p = nextPeople(1)[0]; if (!p) return '';
-  const n = daysLeft(p.m, p.d), age = turningAge(p);
-  return `<div class="widget ${theme}"><div class="w-top">${ic('gift', '', 2.2).replace('<svg', '<svg style="width:13px;height:13px"')}Próximo</div><div><div class="w-big">${n === 0 ? 'Hoy' : n}</div><div class="w-sub">${n === 0 ? '' : n === 1 ? 'día · ' : 'días · '}${age ? `cumple ${age}` : ''}</div></div><div class="w-name">${esc(p.name)}</div></div>`;
+// Colores de los widgets (parte de Unlock). "Automático" sigue al modo claro/oscuro.
+const THEMES = [['classic', 'Automático', 'linear-gradient(135deg,#fff 50%,#1c1c1e 50%)'], ['red', 'Rojo', 'linear-gradient(135deg,#ff5f6d,#e23d4a 55%,#b31b55)'], ['purple', 'Violeta', 'linear-gradient(135deg,#c86dd7,#af52de 55%,#7b2fbf)'], ['night', 'Noche', 'linear-gradient(135deg,#2a1a2e,#15151b)']];
+const wTheme = () => THEMES.some(t => t[0] === S.widgetTheme) ? S.widgetTheme : 'classic';
+// Lo que viene, cumpleaños y (con Unlock) fechas especiales, ordenado por días
+function upcoming(k, withSpecials = true) {
+  const all = S.people.map(p => ({ p, n: daysLeft(p.m, p.d) }));
+  if (withSpecials) all.push(...S.specials.map(sp => ({ sp, n: daysLeft(sp.m, sp.d) })));
+  return all.sort((a, b) => a.n - b.n).slice(0, k);
 }
-function widgetMedium(theme = '') {
-  const ps = nextPeople(3);
-  return `<div class="widget wide ${theme}"><div class="w-top">${ic('cake', '', 2.2).replace('<svg', '<svg style="width:13px;height:13px"')}Próximos cumpleaños</div>${ps.map(p => { const n = daysLeft(p.m, p.d); return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:600"><span>${esc(p.name)}</span><span class="w-sub" style="font-size:14px;font-weight:600">${n === 0 ? 'Hoy 🎂' : n === 1 ? 'Mañana' : `${n} días`}</span></div>`; }).join('')}</div>`;
+const wCircle = it => it.p ? cakeIcon(it.p) : heartIcon();
+const wName = it => esc(it.p ? it.p.name : it.sp.name);
+const wWhen = n => { if (n === 0) return `<span class="w-hoy">Hoy</span>`; if (n === 1) return 'Mañana'; const [a, u] = countParts(n); return `<b>${a}</b> ${u}`; };
+const wBrand = () => `<div class="w-brand">${titleHeart}</div>`;
+// Chico (gratis): el próximo cumple. El día del cumple se pone rojo con confeti.
+function widgetSmall() {
+  const it = upcoming(1, false)[0]; if (!it) return '';
+  const { p, n } = it, age = turningAge(p);
+  const [a, u] = countParts(n);
+  return `<div class="widget sm ${n === 0 ? 'w-party' : ''}">${n === 0 ? '<div class="confetti"></div>' : ''}${cakeIcon(p)}
+    <div class="w-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
+    <div><div class="w-name">${esc(p.name)}</div><div class="w-sub">${n === 0 ? (age ? `Cumple ${age} 🎉` : '¡Feliz cumple! 🎉') : `${monthDay(p.m, p.d)}${age ? ` · ${age}` : ''}`}</div></div></div>`;
 }
+const wRow = it => `<div class="w-row">${wCircle(it)}<div class="grow"><div class="w-rname">${wName(it)}</div><div class="w-sub">${it.p ? monthDay(it.p.m, it.p.d) : esc(it.sp.kind)}</div></div><div class="w-when">${wWhen(it.n)}</div></div>`;
+// Mediano: los próximos tres, como la lista del inicio
+const widgetMedium = th => `<div class="widget md t-${th}">${wBrand()}${upcoming(3).map(wRow).join('')}</div>`;
+// Grande: el mes con los cumples (rojo) y las fechas (violeta), y lo que viene
+function widgetLarge(th) {
+  const y = TODAY.getFullYear(), m = TODAY.getMonth() + 1;
+  const first = (new Date(y, m - 1, 1).getDay() + 6) % 7, days = new Date(y, m, 0).getDate();
+  let cells = '<span></span>'.repeat(first);
+  for (let d = 1; d <= days; d++) {
+    const cu = S.people.some(p => { const [om, od] = observed(p.m, p.d, y); return om === m && od === d; });
+    const sp = S.specials.some(s => s.m === m && s.d === d);
+    cells += `<span class="${cu ? 'cu' : sp ? 'sp' : ''}${d === TODAY.getDate() ? ' hoy' : ''}">${d}</span>`;
+  }
+  return `<div class="widget lg t-${th}"><div class="w-lghead"><span class="w-month">${cap(MONTHS[m - 1])}</span>${wBrand()}</div>
+    <div class="w-cal">${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<i>${x}</i>`).join('')}${cells}</div>
+    <div class="w-sep"></div>${upcoming(3).map(wRow).join('')}</div>`;
+}
+// Chico con foto: la cara de quien cumple
+function widgetPhoto() {
+  const p = S.people.find(x => x.photo) || S.people[0]; if (!p) return '';
+  const n = daysLeft(p.m, p.d), [a, u] = countParts(n);
+  return `<div class="widget sm w-photo" style="background-image:${photoBg(p)}">${n === 0 ? '<div class="confetti"></div>' : ''}<div class="w-pill">${ic('cake', '', 2.2)}${n === 0 ? 'Cumple hoy' : 'Faltan'}</div>
+    <div>${n === 0 ? '' : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`}<div class="w-name ${n === 0 ? 'xl' : ''}">${esc(p.name.split(' ')[0])}</div></div></div>`;
+}
+// Chico de fecha especial: violeta con corazones
+function widgetSpecial() {
+  const sp = [...S.specials].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).find(s => s.kind !== 'Fecha del año') || S.specials[0]; if (!sp) return '';
+  const n = daysLeft(sp.m, sp.d), [a, u] = countParts(n);
+  return `<div class="widget sm w-special"><div class="hearts"></div><div class="w-emoji">${sp.emoji || '💜'}</div>
+    <div class="w-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
+    <div><div class="w-name clamp">${esc(sp.name)}</div><div class="w-sub">${esc(sp.kind)}</div></div></div>`;
+}
+// Pantalla de bloqueo: en línea, circular y rectangular (monocromo, como en iOS)
+function lockScreen() {
+  const [a, b] = upcoming(2, false);
+  const short = it => esc(it.p.name.split(' ')[0]);
+  const ring = it => { const pct = Math.max(.06, 1 - Math.min(it.n, 30) / 30); return `<div class="lk-circ"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg" stroke-dasharray="${(pct * 119.4).toFixed(1)} 200" transform="rotate(-90 22 22)"/></svg><div>${it.n === 0 ? ic('cake', '', 2) : `<b>${it.n}</b>`}<span>${short(it)}</span></div></div>`; };
+  const rect = it => `<div class="lk-rect"><div class="t">${ic('cake', '', 2.2)}${esc(it.p.name)}</div><div>${it.n === 0 ? `Cumple ${turningAge(it.p) || ''} hoy` : it.n === 1 ? 'Cumple mañana' : `En ${countParts(it.n).join(' ')}`}</div><div class="s">${monthDay(it.p.m, it.p.d)}</div></div>`;
+  return `<div class="lk-wall"><div class="lk-inline">${cap(TODAY.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' }).replace('.', ''))} · ${ic('cake', '', 2.2)} ${b ? `${short(b)} ${b.n === 1 ? 'mañana' : `en ${b.n} días`}` : ''}</div><div class="lk-time">9:41</div>
+    <div class="lk-row">${a ? ring(a) : ''}${b ? ring(b) : ''}${a ? rect(a) : ''}</div></div>`;
+}
+// Ícono de app falso para la vista previa del inicio
+const fakeApp = (bg, icon, label) => `<div class="w-app"><span style="background:${bg}">${ic(icon, '', 2)}</span>${label}</div>`;
 function screenWidgets() {
-  const lockedCap = (t) => `<div class="cap"><span>${t}</span>${S.unlocked ? '' : lockBadge()}</div>`;
-  const tap = (f) => S.unlocked ? `data-a="fake" data-msg="En el iPhone: mantené apretada la pantalla de inicio → ＋"` : `data-a="paywall" data-f="${f}"`;
-  const p = nextPeople(1)[0];
-  const photoP = S.people.find(x => x.photo) || p;
-  let h = '';
-  h += `<div class="section"><div class="section-header big">Gratis</div><div class="wall"><div class="wgrid" style="padding:0">${`<div class="wcard">${widgetSmall()}</div>`}<div class="wcard" style="display:flex;align-items:center;color:#fff;font-size:14px;font-weight:600;line-height:1.35;padding:6px">El próximo cumple, siempre a la vista.</div></div></div><div class="section-footer">Widget chico básico. Para agregarlo: mantené apretada la pantalla de inicio → ＋ → Unforgettables.</div></div>`;
-  h += `<div class="section"><div class="section-header big" style="display:flex;justify-content:space-between;align-items:center">Con el desbloqueo ${S.unlocked ? '<span class="unlocked-pill small">✓ Desbloqueado</span>' : lockBadge()}</div></div>`;
-  // Temas
-  const th = S.widgetTheme === 'classic' ? '' : 'theme-' + S.widgetTheme;
-  h += `<div class="section"><div class="section-header">Temas y tamaños</div><div class="group"><div class="theme-dots">${THEMES.map(([k, name, bg]) => `<button class="theme-dot ${S.widgetTheme === k ? 'sel' : ''}" style="background:${bg};${k === 'classic' ? 'box-shadow:inset 0 0 0 1px var(--sep)' : ''}" data-a="widgetTheme" data-v="${k}" aria-label="${name}"></button>`).join('')}</div><div style="padding:0 16px 16px">${widgetMedium(th)}</div></div><div class="section-footer">Mediano y grande, con temas de color. ${S.unlocked ? '' : 'Tocá un color para ver el desbloqueo.'}</div></div>`;
-  // Foto
-  h += `<div class="wgrid" style="margin-bottom:35px">
-    <button class="wcard" ${tap('photo')}><div class="widget photo" style="background-image:${photoBg(photoP)}"><div class="w-top">${ic('hourglass', '', 2.2).replace('<svg', '<svg style="width:13px;height:13px"')}Faltan</div><div><div class="w-big">${daysLeft(photoP.m, photoP.d) || 'Hoy'}</div><div class="w-name">${esc(photoP.name.split(' ')[0])}</div></div></div>${lockedCap('Cuenta regresiva con foto')}</button></div>`;
-  // Lock screen
-  const ps = nextPeople(2);
-  h += `<div class="section"><div class="section-header">Pantalla de bloqueo</div><button class="lock-wall" style="width:100%;display:block" ${tap('lock')}><div class="date">${cap(TODAY.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }))}</div><div class="time">9:41</div><div class="lw-row">${ps.map(p => { const n = daysLeft(p.m, p.d); return `<div class="lw"><div class="ring">${n === 0 ? '🎂' : n}</div><div>${esc(p.name.split(' ')[0])}<div style="font-weight:400;opacity:.85;font-size:12px">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : 'días'}</div></div></div>`; }).join('')}</div></button>${lockedCap('Widget de pantalla de bloqueo con el próximo cumple')}</div>`;
+  const free = '<span class="w-free">Gratis</span>';
+  const tag = () => S.unlocked ? '' : lockBadge();
+  const tap = f => S.unlocked ? `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"` : `data-a="paywall" data-f="${f}"`;
+  const card = (stage, t, s, right, attrs = '') => `<button class="wk" ${attrs}><div class="wk-stage">${stage}</div><div class="wk-info"><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div>${right}</div></button>`;
+  const steps = arr => `<div class="wk-how"><div class="t">Cómo agregarlos</div>${arr.map((x, i) => `<div class="step"><span>${i + 1}</span><div>${x}</div></div>`).join('')}</div>`;
+  const th = wTheme();
+  let h = `<div class="segmented"><button class="${S.widgetsMode === 'home' ? 'sel' : ''}" data-a="widgetsMode" data-v="home">Inicio</button><button class="${S.widgetsMode === 'lock' ? 'sel' : ''}" data-a="widgetsMode" data-v="lock">Pantalla bloqueada</button></div>`;
+  if (S.widgetsMode === 'home') {
+    h += `<div class="wk-list">`;
+    h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', 'Mensajes')}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', 'Fotos')}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', 'Teléfono')}</div></div>`,
+      'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
+    h += `<div class="wk-color"><div class="wk-colhead"><span>Color</span>${tag()}</div><div class="wk-swatches">${THEMES.map(([k, name, bg]) => `<button class="${th === k ? 'sel' : ''}" data-a="widgetTheme" data-v="${k}"><span style="background:${bg}"></span>${name}</button>`).join('')}</div></div>`;
+    h += card(widgetMedium(th), 'Próximos', 'Mediano. Los tres que vienen, con cumples y fechas.', tag(), tap('theme'));
+    h += card(widgetLarge(th), 'Este mes', 'Grande. El calendario del mes y lo que viene.', tag(), tap('theme'));
+    h += `<div class="wk-pair">${card(widgetPhoto(), 'Con foto', 'Chico. Su cara y la cuenta regresiva.', tag(), tap('photo'))}${card(widgetSpecial(), 'Fecha especial', 'Chico. Aniversarios y casamientos.', tag(), tap('specials'))}</div>`;
+    h += steps(['Mantené apretado el fondo de la pantalla de inicio hasta que los íconos se muevan.', 'Tocá <b>Editar</b> arriba a la izquierda y después <b>Agregar widget</b>.', 'Buscá <b>Unforgettables</b>, elegí el tamaño y tocá <b>Agregar widget</b>.']);
+    h += `</div>`;
+  } else {
+    h += `<div class="wk-list">`;
+    h += card(lockScreen(), 'Pantalla bloqueada', 'Cuánto falta, sin desbloquear el iPhone: en línea arriba de la hora, circular y rectangular.', tag(), tap('lock'));
+    h += steps(['Con el iPhone bloqueado, mantené apretada la pantalla y tocá <b>Personalizar</b>.', 'Elegí <b>Pantalla bloqueada</b> y tocá el espacio de widgets debajo de la hora.', 'Buscá <b>Unforgettables</b> y elegí el formato.']);
+    h += `</div>`;
+  }
   return `<div class="screen" data-key="widgets">${navbar({})}<div class="scroll" data-key="widgets-scroll"><div class="large-title">Widgets</div>${h}</div></div>`;
 }
 
@@ -597,10 +662,10 @@ function sheetAddSpecial(o) {
 }
 
 const FEATURES = {
-  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Temas de color y tamaños mediano y grande', ['widgetsTab', 'theme']], ['hourglass', '#ff2d55', 'Cuenta regresiva con foto', 'La cara de quien cumple, en tu inicio', ['photo']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
+  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Mediano y grande, en rojo, violeta o noche', ['widgetsTab', 'theme']], ['hourglass', '#ff2d55', 'Con foto y de fechas especiales', 'Su cara o el aniversario, en tu inicio', ['photo']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
   extras: [['heart', '#af52de', 'Fechas especiales', 'Aniversarios, Día de la Madre y más', ['specials']], ['noAds', '#34c759', NO_ADS.t, NO_ADS.s, []], ['bulb', '#ff9500', 'Sugerencias de regalo', 'Según los gustos de cada uno', ['ideas']], ['share', '#34c759', 'Guardar ideas desde Compartir', 'Desde Safari, Mercado Libre o cualquier app', ['ideas']], ['globe', '#007aff', 'Aviso a la hora de su país', 'Para los que viven lejos', ['tz']], ['people', '#30b0c7', 'Compartir con pareja o familia', 'Una lista para todos', ['share']], ['briefcase', '#8e8e93', 'Modo trabajo', 'Contactos laborales con notas', ['work']]],
 };
-const FEATURE_NAMES = { specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Los temas de widget', photo: 'La cuenta regresiva con foto', lock: 'El widget de bloqueo' };
+const FEATURE_NAMES = { specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Elegir el color y el tamaño', photo: 'La cuenta regresiva con foto', lock: 'El widget de bloqueo' };
 function sheetPaywall(o) {
   const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`).join('');
   const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.</p>
@@ -700,6 +765,7 @@ const A = {
   calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = null; render(); },
   addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
   giftsMode(d) { S.giftsMode = d.v; render(); },
+  widgetsMode(d) { S.widgetsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },
   fake(d) { toast(d.msg || 'Solo de ejemplo', 'ℹ️'); },
   add() { openEditor(null); },

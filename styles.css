@@ -86,7 +86,6 @@ input, textarea, select { font: inherit; color: var(--label); letter-spacing: in
 .navbtn.back svg { width: 13px; height: 21px; margin-left: -4px; }
 .nav-right { display: flex; gap: 18px; align-items: center; }
 .large-title { /* SwiftUI: .navigationBarTitleDisplayMode(.large) */ font-size: 34px; font-weight: 700; letter-spacing: .37px; line-height: 41px; padding: 2px 16px 8px; }
-.title-heart { width: .6em; height: .56em; vertical-align: -.03em; margin: 0 .02em; fill: currentColor; }
 .app-icon { display: block; width: 100%; height: 100%; border-radius: 22.5%; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
 
 /* ---------- List(.insetGrouped) / Form ---------- */
@@ -309,7 +308,6 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .widget .w-name.clamp { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .widget .w-sub { font-size: 12px; color: var(--label2); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .widget .w-brand { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: -.1px; }
-.widget .w-brand .title-heart { width: .72em; height: .66em; }
 .w-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
 .w-row .grow, .wk-info .grow { flex: 1; min-width: 0; }
 .w-rname { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

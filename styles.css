@@ -359,16 +359,22 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal-wd { text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--label2); letter-spacing: .2px; padding-bottom: 4px; }
 .cal-wd.wknd { color: var(--label3); }
-.cal-day { position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; background: var(--fill); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-variant-numeric: tabular-nums; }
+.cal-day { position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; background: var(--fill); display: grid; place-items: center; font-variant-numeric: tabular-nums; }
 .cal-day .n { font-size: 17px; font-weight: 600; line-height: 1; }
 .cal-day.wknd .n { color: var(--label2); }
-.cal-day .hoy { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: .3px; line-height: 1; }
-.cal-day .marks { display: flex; gap: 2px; height: 7px; align-items: center; }
-.cal-day .marks i { width: 7px; height: 7px; border-radius: 50%; }
-.cal-day .marks i.sp { background: var(--purple); }
+/* Día con cumple: torta detrás del número; fecha especial: corazón */
+.cal-day .shape { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; opacity: .5; }
+.cal-day .shape .flame { fill: var(--orange); stroke: none; }
+.cal-day.has-sp .shape { fill: rgba(175,82,222,.15); stroke: var(--purple); }
+.cal-day .n { position: relative; }
+.cal-day.has .n, .cal-day.has-sp .n { font-size: 15px; color: var(--accent); }
+.cal-day.has .n { top: 3px; font-size: 14px; }
+.cal-day.has-sp .n { top: 1px; color: var(--purple); }
+.cal-day .hoy { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: .3px; line-height: 1; }
 .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .cal-day.sel { background: var(--accent); }
 .cal-day.sel .n, .cal-day.sel .hoy, .cal-day.sel.wknd .n { color: #fff; }
-.cal-day.sel .marks i { box-shadow: 0 0 0 1.5px #fff; }
+.cal-day.sel .shape { fill: rgba(255,255,255,.22); stroke: #fff; }
+.cal-day.sel.has .n, .cal-day.sel.has-sp .n { color: #fff; }
 .cal-foot { text-align: center; font-size: 13px; color: var(--label2); padding: 10px 0 2px; }
 .cal-foot button { color: var(--accent); font-size: 13px; }

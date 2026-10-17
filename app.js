@@ -476,12 +476,14 @@ function screenWork() {
 
 /* ---------------- Sheets (overlays) ---------------- */
 const daysIn = (m, y) => [31, (y && !isLeap(y)) ? 28 : 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+// Edad que tiene hoy alguien nacido el d/m de ese año (negativa si todavía no nació)
+const ageOn = (dr, y) => THIS_YEAR - y - (dr.m > TODAY.getMonth() + 1 || (dr.m === TODAY.getMonth() + 1 && dr.d > TODAY.getDate()) ? 1 : 0);
 function wheels(dr, withYear) {
   const maxD = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][dr.m - 1];
   const days = Array.from({ length: maxD }, (_, i) => i + 1);
   const years = []; for (let y = THIS_YEAR; y >= 1900; y--) years.push(y);
   const col = (k, vals, cur, fmt = v => v, cls = '') => `<div class="wheel ${cls}" data-wheel="${k}" data-index="${Math.max(0, vals.indexOf(cur))}" data-vals="${vals.join(',')}">${vals.map(v => `<div>${fmt(v)}</div>`).join('')}</div>`;
-  return `<div class="wheels">${col('d', days, dr.d)}${col('m', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dr.m, v => cap(MONTHS[v - 1]), 'month')}${withYear ? col('y', years, dr.y) : ''}</div>`;
+  return `<div class="wheels">${col('d', days, dr.d)}${col('m', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dr.m, v => cap(MONTHS[v - 1]), 'month')}${withYear ? col('y', years, dr.y, y => { const age = ageOn(dr, y); return `${y}<span class="w-age">${age < 0 ? '' : age === 1 ? '1 año' : `${age} años`}</span>`; }, 'year') : ''}</div>`;
 }
 function sheetWrap(o, inner, { medium = false, cellBg = false, short = false } = {}) {
   return `<div class="dim ${o.fresh ? 'anim' : ''}" data-a="dimTap"></div><div class="sheet ${o.fresh ? 'anim' : ''} ${medium ? 'medium' : ''} ${short ? 'short' : ''} ${cellBg ? 'cell-bg' : ''}">${medium ? '<div class="grabber"></div>' : ''}${inner}</div>`;
@@ -495,7 +497,7 @@ function sheetEditor(o) {
   h += section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
   h += section(`<div class="row"><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`, { header: 'Nombre' });
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
-    { header: 'Fecha', footer: dr.includeYear ? 'Vamos a mostrar la edad que cumple.' : 'Sin año no mostramos la edad, solo el día y el mes.' });
+    { header: 'Fecha', footer: dr.includeYear ? '' : 'Sin año no mostramos la edad, solo el día y el mes.' });
   h += section(`<div class="row has-icon"><span class="icon-sq" style="background:#5856d6">${ic('briefcase', '', 2)}</span><span class="grow">Es de trabajo</span>${S.unlocked ? toggle(dr.work, 'edWork') : `<button data-a="paywall" data-f="work">${lockBadge()}</button>`}</div>` +
     `<div class="row has-icon"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">Vive en otro país</span>${S.unlocked ? `<span class="value">${dr.tz || 'No'}</span>` : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>` +
     `<div class="row"><textarea class="field" id="edNotes" placeholder="Notas (talle, alergias, qué evitar…)">${esc(dr.notes || '')}</textarea></div>`, { header: 'Más' });

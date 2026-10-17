@@ -363,7 +363,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .cal-day .n { font-size: 17px; font-weight: 600; line-height: 1; }
 .cal-day.wknd .n { color: var(--label2); }
 /* Día con cumple: torta detrás del número; fecha especial: corazón */
-.cal-day .shape { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.cal-day .shape { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; opacity: .5; }
 .cal-day .shape .flame { fill: var(--orange); stroke: none; }
 .cal-day.has-sp .shape { fill: rgba(175,82,222,.15); stroke: var(--purple); }
 .cal-day .n { position: relative; }

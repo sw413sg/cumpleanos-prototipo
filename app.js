@@ -78,6 +78,7 @@ const P = {
   paint: '<path d="M12 3.5a8.5 8.5 0 100 17c1.2 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H17a3.5 3.5 0 003.5-3.5c0-5.2-3.8-9.5-8.5-9.5z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7.3" r="1.2"/><circle cx="14.5" cy="7.3" r="1.2"/>',
   lockscreen: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 7h4"/><rect x="9" y="11" width="6" height="5" rx="1"/>',
   hourglass: '<path d="M6.5 3.5h11M6.5 20.5h11M7.5 3.5c0 5 4.5 5.5 4.5 8.5s-4.5 3.5-4.5 8.5M16.5 3.5c0 5-4.5 5.5-4.5 8.5s4.5 3.5 4.5 8.5"/>',
+  listBullet: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="17.5" r=".6"/>',
   person: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/>',
 };
 const ic = (n, cls = '', sw = 1.8) => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
@@ -146,10 +147,11 @@ const S = {
   stacks: { list: [{ s: 'list' }], gifts: [{ s: 'gifts' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
   search: '', listMode: 'all', giftsMode: 'history',
+  listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: TODAY.getDate(),
   pushed: false,
 };
 function persist() {
-  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme }));
+  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, listView: S.listView }));
 }
 const person = id => S.people.find(p => p.id === id);
 const gradFor = id => GRADS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
@@ -217,24 +219,66 @@ function screenList() {
   if (!S.people.length) {
     body = `<div class="empty">${ic('gift')}<h3>Sin cumpleaños</h3><p>Agregá una persona o importá los cumpleaños que ya están en Contactos.</p><button class="btn-link" data-a="add">Agregar persona</button><button class="btn-link" data-a="import">Importar contactos</button></div>`;
   } else {
-    body += `<label class="search">${ic('search', '', 2.2)}<input id="search" type="search" placeholder="Buscar" value="${esc(S.search)}" autocomplete="off"></label>`;
+    if (S.listView === 'list') body += `<label class="search">${ic('search', '', 2.2)}<input id="search" type="search" placeholder="Buscar" value="${esc(S.search)}" autocomplete="off"></label>`;
     body += `<div class="segmented">
       <button class="${S.listMode === 'all' ? 'sel' : ''}" data-a="listMode" data-v="all">Todos</button>
       <button class="${S.listMode === 'birthdays' ? 'sel' : ''}" data-a="listMode" data-v="birthdays">Cumpleaños</button>
       <button class="${S.listMode === 'specials' ? 'sel' : ''}" data-a="listMode" data-v="specials">Fechas${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
-    if (today.length && !q && S.listMode !== 'specials') {
-      const t = today[0], age = turningAge(t);
-      body += `<button class="hero" data-a="open" data-id="${t.id}"><div class="confetti"></div>${avatar(t)}<div><div class="t1">🎂 Hoy es el cumple de</div><div class="t2">${esc(t.name)}</div><div class="t3">${age ? `Cumple ${age} años · ` : ''}Mandale un mensaje</div></div></button>`;
-    }
-    if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
-    if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
-    if (workPeople.length) body += section(workPeople.map(personRow).join(''), { header: 'Trabajo', footer: 'Modo trabajo: tus contactos laborales separados, con notas. Lo cambiás en Ajustes.' });
-    if (!all.length && !workPeople.length) body += `<div class="empty">${ic('search')}<h3>Sin resultados</h3><p>No hay nadie que se llame “${esc(S.search)}”.</p></div>`;
-    if (!S.unlocked && S.listMode === 'all' && !q) {
-      body += section(`<button class="row has-icon" data-a="paywall" data-f="specials"><span class="icon-sq" style="background:#af52de">${ic('heart', '', 2)}</span><span class="grow">Fechas especiales<div class="sub">Aniversarios, Día de la Madre y más</div></span>${lockBadge()}</button>`);
+    if (S.listView === 'calendar') body += calendarBody();
+    else {
+      if (today.length && !q && S.listMode !== 'specials') {
+        const t = today[0], age = turningAge(t);
+        body += `<button class="hero" data-a="open" data-id="${t.id}"><div class="confetti"></div>${avatar(t)}<div><div class="t1">🎂 Hoy es el cumple de</div><div class="t2">${esc(t.name)}</div><div class="t3">${age ? `Cumple ${age} años · ` : ''}Mandale un mensaje</div></div></button>`;
+      }
+      if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
+      if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
+      if (workPeople.length) body += section(workPeople.map(personRow).join(''), { header: 'Trabajo', footer: 'Modo trabajo: tus contactos laborales separados, con notas. Lo cambiás en Ajustes.' });
+      if (!all.length && !workPeople.length) body += `<div class="empty">${ic('search')}<h3>Sin resultados</h3><p>No hay nadie que se llame “${esc(S.search)}”.</p></div>`;
+      if (!S.unlocked && S.listMode === 'all' && !q) {
+        body += section(`<button class="row has-icon" data-a="paywall" data-f="specials"><span class="icon-sq" style="background:#af52de">${ic('heart', '', 2)}</span><span class="grow">Fechas especiales<div class="sub">Aniversarios, Día de la Madre y más</div></span>${lockBadge()}</button>`);
+      }
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Cumpleaños</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Cumpleaños</div>${body}</div></div>`;
+}
+
+// Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
+const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DAYNAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function calendarItems(y, m) {
+  // Qué se festeja cada día de ese mes (el 29/2 cae el 28 en años no bisiestos)
+  const byDay = {};
+  const add = (d, it) => (byDay[d] = byDay[d] || []).push(it);
+  let people = S.listMode === 'specials' ? [] : S.people;
+  if (S.unlocked && !S.work.on) people = people.filter(p => !p.work);
+  for (const p of people) { const [om, od] = observed(p.m, p.d, y); if (om === m) add(od, { p }); }
+  if (S.unlocked && S.listMode !== 'birthdays') for (const sp of S.specials) if (sp.m === m) add(sp.d, { sp });
+  for (const d in byDay) byDay[d].sort((a, b) => (a.p ? a.p.name : a.sp.name).localeCompare(b.p ? b.p.name : b.sp.name, 'es'));
+  return byDay;
+}
+function calendarBody() {
+  const y = S.calY, m = S.calM, byDay = calendarItems(y, m);
+  const days = new Date(y, m, 0).getDate(), lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+  const isThisMonth = y === TODAY.getFullYear() && m === TODAY.getMonth() + 1;
+  let cells = '<span></span>'.repeat(lead);
+  for (let d = 1; d <= days; d++) {
+    const items = byDay[d] || [], wknd = (lead + d - 1) % 7 >= 5;
+    const marks = items.slice(0, 3).map(it => it.p ? `<i style="background:linear-gradient(160deg,${gradFor(it.p.id).join(',')})"></i>` : `<i class="sp"></i>`).join('');
+    const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.length ? 'has' : ''].join(' ');
+    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}"><span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}<span class="marks">${marks}</span></button>`;
+  }
+  const total = Object.values(byDay).flat().filter(it => it.p).length;
+  let h = `<div class="cal"><div class="cal-head"><button class="cal-arrow" data-a="calMove" data-v="-1" aria-label="Mes anterior">${ic('back', '', 2.4)}</button><div class="cal-title"><div class="m">${cap(MONTHS[m - 1])}</div><div class="y">${y}</div></div><button class="cal-arrow" data-a="calMove" data-v="1" aria-label="Mes siguiente">${ic('back', 'flip', 2.4)}</button></div>`;
+  h += `<div class="cal-grid">${WEEKDAYS.map((w, i) => `<span class="cal-wd ${i >= 5 ? 'wknd' : ''}">${w}</span>`).join('')}${cells}</div>`;
+  h += `<div class="cal-foot">${total ? `${total} ${total === 1 ? 'cumpleaños' : 'cumpleaños'} en ${MONTHS[m - 1]}` : `Nadie cumple en ${MONTHS[m - 1]}`}${isThisMonth ? '' : ` · <button data-a="calToday">Ir a hoy</button>`}</div></div>`;
+  const sel = S.calD && S.calD <= days ? S.calD : null;
+  if (sel) {
+    const items = byDay[sel] || [], dt = new Date(y, m - 1, sel);
+    const header = `${DAYNAMES[dt.getDay()]} ${sel} de ${MONTHS[m - 1]}`;
+    h += items.length ? section(items.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header })
+      : section(`<button class="row accent" data-a="addOnDay">${ic('plus', 'check', 2.2)}Agregar un cumple este día</button>`, { header, footer: 'Nadie cumple este día.' });
+  }
+  return h;
 }
 
 function screenDetail(id) {
@@ -583,6 +627,11 @@ const A = {
   openSpecial(d) { push({ s: 'special', id: d.id }); },
   suggest(d) { push({ s: 'suggest', id: d.id }); },
   listMode(d) { if (d.v === 'specials' && needUnlock('specials')) return; S.listMode = d.v; render(); },
+  listView() { S.listView = S.listView === 'list' ? 'calendar' : 'list'; persist(); render(); },
+  calDay(d) { S.calD = +d.d; render(); },
+  calMove(d) { const t = new Date(S.calY, S.calM - 1 + +d.v, 1); S.calY = t.getFullYear(); S.calM = t.getMonth() + 1; S.calD = null; render(); },
+  calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = TODAY.getDate(); render(); },
+  addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
   giftsMode(d) { S.giftsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },
   fake(d) { toast(d.msg || 'Solo de ejemplo', 'ℹ️'); },

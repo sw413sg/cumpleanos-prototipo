@@ -153,7 +153,7 @@ const S = {
   stacks: { list: [{ s: 'list' }], gifts: [{ s: 'gifts' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
   search: '', listMode: 'all', giftsMode: 'history',
-  listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: TODAY.getDate(),
+  listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
 function persist() {
@@ -247,6 +247,11 @@ function screenList() {
         const t = today[0], age = turningAge(t);
         body += `<button class="hero" data-a="open" data-id="${t.id}"><div class="confetti"></div>${avatar(t)}<div><div class="t1">🎂 Hoy es el cumple de</div><div class="t2">${esc(t.name)}</div><div class="t3">${age ? `Cumple ${age} años · ` : ''}Mandale un mensaje</div></div></button>`;
       }
+      const spToday = S.listMode === 'birthdays' || q ? [] : specials.filter(sp => daysLeft(sp.m, sp.d) === 0);
+      if (spToday.length) {
+        const sp = spToday[0], yrs = sp.y ? TODAY.getFullYear() - sp.y : null;
+        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}"><div class="hearts"></div><div class="avatar">${sp.emoji || '💜'}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
+      }
       if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
       if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
       if (workPeople.length) body += section(workPeople.map(personRow).join(''), { header: 'Trabajo', footer: 'Modo trabajo: tus contactos laborales separados, con notas. Lo cambiás en Ajustes.' });
@@ -297,6 +302,10 @@ function calendarBody() {
     const header = `${DAYNAMES[dt.getDay()]} ${sel} de ${MONTHS[m - 1]}`;
     h += items.length ? section(items.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header })
       : section(`<button class="row accent" data-a="addOnDay">${ic('plus', 'check', 2.2)}Agregar un cumple este día</button>`, { header, footer: 'Nadie cumple este día.' });
+    h += `<div style="text-align:center;margin:-14px 0 24px"><button class="navbtn" data-a="calDay" data-d="${sel}">Ver todo ${MONTHS[m - 1]}</button></div>`;
+  } else {
+    const all = Object.keys(byDay).map(Number).sort((a, b) => a - b).flatMap(d => byDay[d]);
+    if (all.length) h += section(all.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header: `Todo ${MONTHS[m - 1]}`, footer: 'Tocá un día para ver solo ese.' });
   }
   return h;
 }
@@ -472,12 +481,14 @@ function screenWork() {
 
 /* ---------------- Sheets (overlays) ---------------- */
 const daysIn = (m, y) => [31, (y && !isLeap(y)) ? 28 : 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+// Edad que tiene hoy alguien nacido el d/m de ese año (negativa si todavía no nació)
+const ageOn = (dr, y) => THIS_YEAR - y - (dr.m > TODAY.getMonth() + 1 || (dr.m === TODAY.getMonth() + 1 && dr.d > TODAY.getDate()) ? 1 : 0);
 function wheels(dr, withYear) {
   const maxD = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][dr.m - 1];
   const days = Array.from({ length: maxD }, (_, i) => i + 1);
   const years = []; for (let y = THIS_YEAR; y >= 1900; y--) years.push(y);
   const col = (k, vals, cur, fmt = v => v, cls = '') => `<div class="wheel ${cls}" data-wheel="${k}" data-index="${Math.max(0, vals.indexOf(cur))}" data-vals="${vals.join(',')}">${vals.map(v => `<div>${fmt(v)}</div>`).join('')}</div>`;
-  return `<div class="wheels">${col('d', days, dr.d)}${col('m', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dr.m, v => cap(MONTHS[v - 1]), 'month')}${withYear ? col('y', years, dr.y) : ''}</div>`;
+  return `<div class="wheels">${col('d', days, dr.d)}${col('m', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dr.m, v => cap(MONTHS[v - 1]), 'month')}${withYear ? col('y', years, dr.y, y => { const age = ageOn(dr, y); return `${y}<span class="w-age">${age < 0 ? '' : age === 1 ? '1 año' : `${age} años`}</span>`; }, 'year') : ''}</div>`;
 }
 function sheetWrap(o, inner, { medium = false, cellBg = false, short = false } = {}) {
   return `<div class="dim ${o.fresh ? 'anim' : ''}" data-a="dimTap"></div><div class="sheet ${o.fresh ? 'anim' : ''} ${medium ? 'medium' : ''} ${short ? 'short' : ''} ${cellBg ? 'cell-bg' : ''}">${medium ? '<div class="grabber"></div>' : ''}${inner}</div>`;
@@ -487,11 +498,11 @@ const canSave = dr => dr.name.trim() && !leapErr(dr);
 
 function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
-  let h = editing ? '' : section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
+  let h = editing ? '' : addKindSwitch('cumple') + section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
   h += section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
   h += section(`<div class="row"><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`, { header: 'Nombre' });
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
-    { header: 'Fecha', footer: dr.includeYear ? 'Vamos a mostrar la edad que cumple.' : 'Sin año no mostramos la edad, solo el día y el mes.' });
+    { header: 'Fecha', footer: dr.includeYear ? '' : 'Sin año no mostramos la edad, solo el día y el mes.' });
   h += section(`<div class="row has-icon"><span class="icon-sq" style="background:#5856d6">${ic('briefcase', '', 2)}</span><span class="grow">Es de trabajo</span>${S.unlocked ? toggle(dr.work, 'edWork') : `<button data-a="paywall" data-f="work">${lockBadge()}</button>`}</div>` +
     `<div class="row has-icon"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">Vive en otro país</span>${S.unlocked ? `<span class="value">${dr.tz || 'No'}</span>` : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>` +
     `<div class="row"><textarea class="field" id="edNotes" placeholder="Notas (talle, alergias, qué evitar…)">${esc(dr.notes || '')}</textarea></div>`, { header: 'Más' });
@@ -557,11 +568,13 @@ function sheetTz(o) {
   const opts = [['null', 'Igual que vos (Buenos Aires)'], ['Madrid', 'Madrid (+5 h)'], ['Miami', 'Miami (−1 h)'], ['Ciudad de México', 'Ciudad de México (−3 h)'], ['Sídney', 'Sídney (+14 h)']];
   return sheetWrap(o, navbar({ title: 'Dónde vive', right: `<button class="navbtn bold" data-a="dismiss">OK</button>` }) + `<div class="scroll">${section(checkList(opts, p.tz ?? 'null', 'tzSet'), { footer: 'El aviso del día te llega cuando allá ya es su cumple.' })}</div>`, { medium: true });
 }
+// Selector de arriba al tocar +: qué querés agregar
+const addKindSwitch = cur => `<div class="segmented"><button class="${cur === 'cumple' ? 'sel' : ''}" data-a="addKind" data-v="cumple">Cumpleaños</button><button class="${cur === 'fecha' ? 'sel' : ''}" data-a="addKind" data-v="fecha">Fecha${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
 function sheetAddSpecial(o) {
   const dr = o.draft;
   const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Fecha del año', '📅'], ['Otra', '⭐️']];
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
-    `<div class="scroll">${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
+    `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
 }
 
 const FEATURES = {
@@ -663,9 +676,9 @@ const A = {
   suggest(d) { push({ s: 'suggest', id: d.id }); },
   listMode(d) { if (d.v === 'specials' && needUnlock('specials')) return; S.listMode = d.v; render(); },
   listView() { S.listView = S.listView === 'list' ? 'calendar' : 'list'; persist(); render(); },
-  calDay(d) { S.calD = +d.d; render(); },
+  calDay(d) { S.calD = S.calD === +d.d ? null : +d.d; render(); },
   calMove(d) { const t = new Date(S.calY, S.calM - 1 + +d.v, 1); S.calY = t.getFullYear(); S.calM = t.getMonth() + 1; S.calD = null; render(); },
-  calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = TODAY.getDate(); render(); },
+  calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = null; render(); },
   addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
   giftsMode(d) { S.giftsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },
@@ -675,6 +688,12 @@ const A = {
   import() { present({ s: 'import', sel: new Set() }); },
   impToggle(d) { const o = topOverlay(); o.sel.has(d.id) ? o.sel.delete(d.id) : o.sel.add(d.id); render(); },
   impAll() { const o = topOverlay(); const selectable = AGENDA.filter(c => !S.people.some(p => p.name === c.name)); const all = selectable.every(c => o.sel.has(c.id)); o.sel = all ? new Set() : new Set(selectable.map(c => c.id)); render(); },
+  addKind(d) {
+    const cur = topOverlay().s === 'editor' ? 'cumple' : 'fecha'; if (d.v === cur) return;
+    if (d.v === 'fecha') { if (needUnlock('specials')) return; S.overlays.pop(); present({ s: 'addSpecial', fromPlus: true, draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); }
+    else { S.overlays.pop(); openEditor(null); }
+    topOverlay().fresh = false; render();
+  },
   bulkAdd() { S.overlays.pop(); present({ s: 'import', sel: new Set() }); },
   impNext() { const o = topOverlay(); o.rows = AGENDA.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m || null, d: c.d || null, y: c.y || null, photo: !!c.photo })); render(); },
   impBack() { delete topOverlay().rows; render(); },

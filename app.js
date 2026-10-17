@@ -244,6 +244,9 @@ function screenList() {
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+// Forma detrás del número: torta = cumpleaños, corazón = fecha especial (SwiftUI: Shape propia)
+const CAL_CAKE = '<svg class="shape" viewBox="0 0 40 40" aria-hidden="true"><path class="flame" d="M20 1.5c1.6 1.7 1.6 3.3 0 4.5-1.6-1.2-1.6-2.8 0-4.5z"/><path d="M20 6.5v3.5"/><path d="M8 10h24a3.5 3.5 0 013.5 3.5V31H4.5V13.5A3.5 3.5 0 018 10z"/><path d="M4.5 13.5q2.6 3 5.2 0t5.2 0 5.2 0 5.2 0 5.2 0 5.2 0"/><path d="M2.5 31h35"/></svg>';
+const CAL_HEART = '<svg class="shape" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 35C9 28 3 22 3 14.5 3 9.8 6.6 6.5 11 6.5c3.8 0 6.6 2.3 9 5.5 2.4-3.2 5.2-5.5 9-5.5 4.4 0 8 3.3 8 8 0 7.5-6 13.5-17 20.5z"/></svg>';
 const DAYNAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 function calendarItems(y, m) {
   // Qué se festeja cada día de ese mes (el 29/2 cae el 28 en años no bisiestos)
@@ -264,7 +267,8 @@ function calendarBody() {
   for (let d = 1; d <= days; d++) {
     const items = byDay[d] || [], wknd = (lead + d - 1) % 7 >= 5;
     const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.some(it => it.p) ? 'has' : items.length ? 'has-sp' : ''].join(' ');
-    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}"><span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}</button>`;
+    const shape = items.some(it => it.p) ? CAL_CAKE : items.length ? CAL_HEART : '';
+    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}">${shape}<span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}</button>`;
   }
   const total = Object.values(byDay).flat().filter(it => it.p).length;
   let h = `<div class="cal"><div class="cal-head"><button class="cal-arrow" data-a="calMove" data-v="-1" aria-label="Mes anterior">${ic('back', '', 2.4)}</button><div class="cal-title"><div class="m">${cap(MONTHS[m - 1])}</div><div class="y">${y}</div></div><button class="cal-arrow" data-a="calMove" data-v="1" aria-label="Mes siguiente">${ic('back', 'flip', 2.4)}</button></div>`;

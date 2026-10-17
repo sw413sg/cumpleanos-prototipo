@@ -146,17 +146,21 @@ function gustoMatch(g) {
   const names = ([w, syn]) => [gNorm(w), ...gNorm(syn).split('|')];
   return GUSTO_LIST.find(e => names(e).includes(n)) || GUSTO_LIST.find(e => names(e).some(x => words.includes(x) || x.split(/\s+/).includes(n)));
 }
-// Sugerencias: las ideas de cada gusto, intercaladas (y arrancando en precios distintos) para que no salgan todas iguales. [idea, gusto, precio]
+// Edad que cumple → grupo de la base: n = chicos (hasta 12), j = adolescentes (13 a 17), a = adultos. Sin año, todas.
+const ageGroup = p => { const age = turningAge(p); return age == null ? null : age <= 12 ? 'n' : age <= 17 ? 'j' : 'a'; };
+// Sugerencias: las ideas de sus gustos que sirven para la edad que cumple, mezcladas (siempre igual para cada persona). [idea, gusto]
 function suggestionsFor(p) {
-  const per = p.gustos.map((g, i) => { const m = gustoMatch(g); if (!m) return []; const l = m[2].map(([what, k]) => [what, g, k]); const r = (i * 2) % (l.length || 1); return [...l.slice(r), ...l.slice(0, r)]; });
-  const out = [];
-  for (let i = 0; per.some(l => l[i]); i++) per.forEach(l => { if (l[i] && !out.some(o => o[0] === l[i][0])) out.push(l[i]); });
-  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', 0]);
+  const grp = ageGroup(p), out = [];
+  for (const g of p.gustos) { const m = gustoMatch(g); if (m) for (const [what, ages] of m[2]) if ((!grp || ages.includes(grp)) && !out.some(o => o[0] === what)) out.push([what, g]); }
+  let seed = [...p.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General']);
 }
 // Buscar la idea en Mercado Libre: abre el listado con ese texto (sin API)
 const mlUrl = what => 'https://listado.mercadolibre.com.ar/' + encodeURIComponent(gNorm(what).replace(/["“”:+]/g, '').trim().replace(/\s+/g, '-'));
 const mlBtn = what => `<a class="ml-btn" href="${mlUrl(what)}" target="_blank" rel="noopener" aria-label="Buscar en Mercado Libre">${ic('search', '', 2.4)}</a>`;
-const SUGGESTIONS_DEFAULT = ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'];
+const SUGGESTIONS_DEFAULT = ['Un libro que le pueda gustar', 'Una salida juntos', 'Una planta linda con maceta', 'Algo hecho por vos, con una carta'];
 
 /* ---------------- Estado ---------------- */
 const LS = 'ub-proto-v1';
@@ -356,7 +360,7 @@ function giftBox(p) {
     const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w) && !p.gifts.some(g => similar(g.what, w))).slice(0, 2);
     h += `<div class="gb-block">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', 'Guardá lo que se te ocurra, o una de las sugeridas.')}
       ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(i.what)}<div class="s">${esc(i.src || 'Idea guardada')}</div></span>${mlBtn(i.what)}</div>`).join('')}
-      ${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span>${mlBtn(w)}<button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
+      ${sug.length ? `<div class="gb-label">${ic('sparkles', '', 2)}Sugerencias por los gustos que seleccionaste</div>` : ''}${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span>${mlBtn(w)}<button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
       <div class="gb-actions">${add('addIdea', 'Idea')}<button class="gb-link" data-a="suggest" data-id="${p.id}">Ver más sugerencias${chev()}</button></div></div>`;
   } else {
     h += `<button class="gb-block gb-locked" data-a="paywall" data-f="ideas">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', `Guardá ideas y recibí sugerencias según lo que le gusta a ${first}.`, lockBadge())}</button>`;
@@ -410,8 +414,8 @@ function screenSuggest(id) {
     const savedIdea = p.ideas.some(x => x.what === what);
     return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span>${mlBtn(what)}<button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
-  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` +
-    section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Con la lupa la buscás en Mercado Libre.' });
+  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Sugerencias por los gustos que seleccionaste${ageGroup(p) ? ` y que cumple ${turningAge(p)}` : ''}.</div>` +
+    section(rows, { cls: '', footer: 'Con la lupa buscás cada idea en Mercado Libre.' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(p.name.split(' ')[0]), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function similar(a, b) {

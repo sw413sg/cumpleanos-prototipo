@@ -176,7 +176,7 @@ const S = {
   tab: 'list',
   stacks: { list: [{ s: 'list' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
-  search: '', listMode: 'all', giftsMode: 'history', widgetsMode: 'home',
+  search: '', listMode: 'all', widgetsMode: 'home',
   listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
@@ -299,7 +299,7 @@ function screenList() {
       }
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="go" data-s="gifts" aria-label="Regalos">${ic('gift', '', 2)}</button><button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
 }
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
@@ -347,7 +347,7 @@ function calendarBody() {
   return h;
 }
 
-// Sección Regalos de la ficha. Mismo estilo de tarjetas que Widgets y Regalos.
+// Sección Regalos de la ficha (el único lugar de regalos). Mismo estilo de tarjetas que Widgets.
 function giftBox(p) {
   const first = esc(p.name.split(' ')[0]);
   const head = (icon, bg, t, s, extra = '') => `<div class="gb-head"><span class="gb-ic" style="background:${bg}">${ic(icon, '', 2.2)}</span><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div>${extra}</div>`;
@@ -422,56 +422,6 @@ function similar(a, b) {
   const words = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9ñ]+/).filter(w => w.length >= 4 && !['para', 'con', 'desde', 'clase'].includes(w));
   const wa = words(a), wb = words(b); const shared = wb.filter(w => wa.includes(w)).length;
   return shared > 0 && shared >= Math.min(2, wa.length, wb.length);
-}
-
-/* ---------------- Pantallas: Regalos ---------------- */
-// Se abre desde el ícono de regalo de la lista (al lado del calendario). Mismo estilo que Widgets: tarjetas redondeadas.
-function giftNext() {
-  const p = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d))[0]; if (!p) return '';
-  const n = daysLeft(p.m, p.d), age = turningAge(p), [a, u] = countParts(n);
-  const past = [...p.gifts].sort((x, y) => y.year - x.year).slice(0, 2);
-  return `<div class="wk"><button class="gk-hero" data-a="open" data-id="${p.id}"><div class="${n === 0 ? 'confetti' : 'hearts'}"></div>
-    <div class="gk-top">${cakeIcon(p)}<div class="grow"><div class="gk-name">${esc(p.name)}</div><div class="gk-sub">${monthDay(p.m, p.d)}${age ? ` · cumple ${age}` : ''}</div></div>
-    <div class="gk-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div></div>
-    <div><div class="gk-label">Le gusta</div><div class="gk-chips">${p.gustos.length ? p.gustos.map(g => `<span>${esc(g)}</span>`).join('') : '<span class="none">Todavía no anotaste sus gustos</span>'}</div></div>
-    ${past.length ? `<div><div class="gk-label">Ya le regalaste</div>${past.map(g => `<div class="gk-past"><span>${esc(g.what)}</span><span>${g.year}</span></div>`).join('')}</div>` : ''}</button>
-    <div class="wk-info"><div class="grow"><div class="t">Próximo regalo</div><div class="s">Sus gustos y lo que ya le regalaste, para no repetir.</div></div><button class="gk-btn" data-a="openGifts" data-id="${p.id}">${ic('gift', '', 2.2)}Regalo</button></div></div>`;
-}
-const gkCard = (head, rows) => `<div class="gk-card">${head}${rows}</div>`;
-function screenGifts() {
-  let h = `<div class="wk-list">${giftNext()}`;
-  h += `<div class="segmented gk-seg"><button class="${S.giftsMode === 'history' ? 'sel' : ''}" data-a="giftsMode" data-v="history">Historial</button><button class="${S.giftsMode === 'ideas' ? 'sel' : ''}" data-a="giftsMode" data-v="ideas">Ideas${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
-  if (S.giftsMode === 'history') {
-    const all = S.people.flatMap(p => p.gifts.map(g => ({ ...g, p })));
-    const years = [...new Set(all.map(g => g.year))].sort((a, b) => b - a);
-    if (!all.length) h += `<div class="empty" style="padding-top:20px">${ic('gift')}<h3>Sin regalos todavía</h3><p>Cuando anotes un regalo en la ficha de alguien, aparece acá.</p></div>`;
-    for (const y of years) {
-      const gs = all.filter(g => g.year === y);
-      h += gkCard(`<div class="gk-head"><span class="t">${y}</span><span class="s">${gs.length} ${gs.length === 1 ? 'regalo' : 'regalos'}</span></div>`,
-        gs.map(g => `<button class="gk-row" data-a="open" data-id="${g.p.id}">${cakeIcon(g.p)}<span class="grow"><div class="w-rname">${esc(g.what)}</div><div class="w-sub">${esc(g.p.name)}</div></span>${chev()}</button>`).join(''));
-    }
-    h += `<div class="gk-note">El historial es gratis. Si vas a repetir un regalo, la app te avisa: “ya se lo regalaste”.</div>`;
-  } else if (!S.unlocked) {
-    const p = S.people.find(x => x.gustos.length) || S.people[0];
-    const mock = (emoji, t, s) => `<div class="gk-idea"><span>${emoji}</span><div class="grow"><div class="w-rname">${t}</div><div class="w-sub">${s}</div></div></div>`;
-    h += `<button class="wk" data-a="paywall" data-f="ideas"><div class="wk-stage gk-ideas"><div class="hearts"></div><div class="gk-ideas-list">
-      ${mock('✨', p && p.gustos[0] ? `Algo de ${esc(p.gustos[0])}` : 'Una idea para vos', `Sugerencia para ${esc(p ? p.name.split(' ')[0] : 'Mora')}`)}${mock('🔗', 'Vinilo de Taylor Swift', 'Guardada desde Mercado Libre')}</div></div>
-      <div class="wk-info"><div class="grow"><div class="t">Ideas de regalo</div><div class="s">Guardá ideas desde Safari o Mercado Libre con <b>Compartir</b>, y recibí sugerencias según sus gustos.</div></div>${lockBadge()}</div></button>`;
-  } else {
-    // Una tarjeta por persona: primero lo que guardaste, después sugerencias por sus gustos
-    const byNext = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d));
-    const shown = byNext.filter((p, i) => i === 0 || p.ideas.length);
-    for (const p of shown) {
-      const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w)).slice(0, p.ideas.length ? 2 : 3);
-      const n = daysLeft(p.m, p.d);
-      h += gkCard(`<div class="gk-head gk-person">${cakeIcon(p)}<span class="t grow">${esc(p.name)}</span><span class="s">${n === 0 ? 'Hoy' : `en ${n} ${n === 1 ? 'día' : 'días'}`}</span></div>` +
-        (p.ideas.length ? `<div class="gk-sub">Guardadas</div>` + p.ideas.map(i => `<button class="gk-row" data-a="openGifts" data-id="${p.id}"><span class="gk-bulb">${ic('bulb', '', 2)}</span><span class="grow"><div class="w-rname">${esc(i.what)}</div><div class="w-sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join('') : ''),
-        (sug.length ? `<div class="gk-sub">Sugerencias por sus gustos</div>` + sug.map(([what, why]) => `<button class="gk-row" data-a="suggest" data-id="${p.id}"><span class="gk-bulb">${ic('sparkles', '', 2)}</span><span class="grow"><div class="w-rname">${esc(what)}</div><div class="w-sub">Porque le gusta: ${esc(why)}</div></span>${chev()}</button>`).join('') : ''));
-    }
-    h += `<button class="gk-card gk-try" data-a="shareDemo">${ic('share', '', 2)}Probar: guardar desde Compartir</button><div class="gk-note">Cuando mirás algo en Safari o Mercado Libre, tocás Compartir → Unforgettables y la idea se guarda acá. Este botón lo simula.</div>`;
-  }
-  h += `</div>`;
-  return `<div class="screen" data-key="gifts">${navbar({ left: backBtn('Unforgettables') })}<div class="scroll" data-key="gifts-scroll"><div class="large-title">Regalos</div>${h}</div></div>`;
 }
 
 /* ---------------- Pantallas: Widgets ---------------- */
@@ -758,16 +708,6 @@ function sheetPaywall(o) {
 function sheetStore(o) {
   return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">${appIcon()}</div><div style="flex:1"><div style="font-weight:600">Desbloquear todo</div><div class="muted small">Unforgettables · Compra dentro de la app</div></div></div><div class="kv"><span>Precio</span><span>USD 4,99 · pago único</span></div><div class="kv"><span>Cuenta</span><span>tu Apple ID</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : 'Comprar'}</button><button class="btn-plain" data-a="dismiss">Cancelar</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(Simulación de App Store — no se cobra nada)</div></div>`, { medium: true, short: true, cellBg: true });
 }
-function sheetShare(o) {
-  const apps = [['💬', 'Mensajes', '#34c759'], ['🟢', 'WhatsApp', '#25d366'], ['✉️', 'Mail', '#1e90ff'], [appIcon(), 'Unforgettables', 'none'], ['📝', 'Notas', '#ffcc00']];
-  return sheetWrap(o, `<div style="padding:12px 16px 0"><div class="share-mock" style="margin:0;display:flex;gap:12px;align-items:center"><div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#ffe600,#ffcd00);display:grid;place-items:center;font-size:28px">🎧</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">Auriculares JBL Tune 520BT</div><div class="muted small">articulo.mercadolibre.com.ar</div></div></div>
-    <div class="share-apps">${apps.map(([e, n, bg]) => `<button class="share-app" data-a="${n === 'Unforgettables' ? 'shareToApp' : 'fake'}" data-msg="Solo de ejemplo"><div class="ic" style="background:${bg}">${e}</div>${n}</button>`).join('')}</div>
-    <div class="small muted" style="text-align:center;padding:8px 0 calc(var(--safe-bottom) + 16px)">Este es el menú Compartir de iOS. Tocá <b>Unforgettables</b>.</div></div>`, { medium: true, short: true });
-}
-function sheetPick(o) {
-  const rows = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).map(p => `<button class="row person" data-a="pickPerson" data-id="${p.id}">${avatar(p)}<span class="grow"><div>${esc(p.name)}</div><div class="sub">${esc(subtitle(p))}</div></span></button>`).join('');
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Guardar idea para…' }) + `<div class="scroll">${section(`<div class="row"><span class="grow"><b>Auriculares JBL Tune 520BT</b><div class="sub">Mercado Libre</div></span></div>`, { header: 'Idea' })}${section(rows, { header: '¿Para quién?' })}</div>`);
-}
 
 function coverOnboarding(o) {
   const st = o.step;
@@ -785,7 +725,7 @@ function coverOnboarding(o) {
   return `<div class="full-cover ${o.fresh ? 'anim' : ''}"><div class="ob"><div class="art">${art}</div><h1>${title}</h1><p>${text}</p>${dots}<div class="stack">${btns}</div></div></div>`;
 }
 
-const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, share: sheetShare, pick: sheetPick, onboarding: coverOnboarding };
+const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, onboarding: coverOnboarding };
 
 function dialogHtml(d) {
   if (d.type === 'alert') return `<div class="alert-wrap"><div class="alert ${d.fresh ? 'anim' : ''}"><div class="body"><div class="t">${d.title}</div><div class="m">${d.msg}</div></div><div class="btns">${d.buttons.map(b => `<button data-a="${b.a}">${b.label}</button>`).join('')}</div></div></div>`;
@@ -794,7 +734,7 @@ function dialogHtml(d) {
 
 /* ---------------- Render ---------------- */
 const phone = document.getElementById('phone');
-const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), gifts: screenGifts, widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, specials: screenSpecials, share: screenShare, work: screenWork };
+const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, specials: screenSpecials, share: screenShare, work: screenWork };
 const TABS = [['list', 'Unforgettables', 'heart'], ['widgets', 'Widgets', 'widgets'], ['settings', 'Ajustes', 'gear']];
 const statusbar = `<div class="statusbar"><span>9:41</span><span class="icons"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.1-1.2A10 10 0 008 .8 10 10 0 00.9 3.7L2 4.9a8.4 8.4 0 016-2.4zm0 3.4c1.4 0 2.6.5 3.6 1.4l1.1-1.2A7 7 0 008 4.2a7 7 0 00-4.7 1.9l1.1 1.2c1-.9 2.2-1.4 3.6-1.4zm0 3.3c.6 0 1.1.2 1.5.6L8 11.4 6.5 9.8c.4-.4.9-.6 1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2.5" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div>`;
 
@@ -844,7 +784,6 @@ const A = {
   calMove(d) { const t = new Date(S.calY, S.calM - 1 + +d.v, 1); S.calY = t.getFullYear(); S.calM = t.getMonth() + 1; S.calD = null; render(); },
   calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = null; render(); },
   addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
-  giftsMode(d) { S.giftsMode = d.v; render(); },
   widgetsMode(d) { S.widgetsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },
   fake(d) { toast(d.msg || 'Solo de ejemplo', 'ℹ️'); },
@@ -882,8 +821,6 @@ const A = {
   doDelete() { const o = topOverlay(); S.people = S.people.filter(p => p.id !== o.id); S.dialog = null; S.overlays.pop(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Persona eliminada', '🗑️'); },
   dialogCancel() { S.dialog = null; render(); },
   toGifts() { const el = document.getElementById('regalos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
-  // El botón Regalo de "Próximo regalo" lleva a la misma sección Regalos de la ficha
-  openGifts(d) { push({ s: 'detail', id: d.id }); setTimeout(A.toGifts, 350); },
   addGift(d) { present({ s: 'gift', id: d.id, draft: { what: '', year: THIS_YEAR } }); },
   addIdea(d) { if (needUnlock('ideas')) return; present({ s: 'idea', id: d.id, draft: { what: '' } }); },
   giftSave() {
@@ -931,9 +868,6 @@ const A = {
   obNotifYes() { S.dialog = null; S.rem.on = true; topOverlay().step++; render(); },
   obNotifNo() { S.dialog = null; S.rem.on = false; topOverlay().step++; render(); },
   obDone() { S.overlays.pop(); S.tab = 'list'; S.stacks.list = [{ s: 'list' }]; localStorage.setItem(LS + '-ob', '1'); persist(); if (!S.unlocked) present({ s: 'paywall', soft: true }); else render(); },
-  shareDemo() { present({ s: 'share' }); },
-  shareToApp() { S.overlays.pop(); present({ s: 'pick' }); },
-  pickPerson(d) { const p = person(d.id); p.ideas.push({ what: 'Auriculares JBL Tune 520BT', src: 'Guardada desde Mercado Libre' }); S.overlays.pop(); persist(); toast(`Idea guardada para ${p.name.split(' ')[0]}`, '💡'); },
 };
 function importContacts(ids) {
   let n = 0;

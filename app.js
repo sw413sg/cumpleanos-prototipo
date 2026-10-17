@@ -135,14 +135,105 @@ const CONTACTS = [
 const AGENDA = [...CONTACTS, { id: 'n1', name: 'Agus Ferreyra', photo: true }, { id: 'n2', name: 'Caro Méndez' }, { id: 'n3', name: 'Juli Sosa' }, { id: 'n4', name: 'Mati Quiroga', photo: true }, { id: 'n5', name: 'Pili Ortega' }]
   .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
-const SUGGESTIONS = {
-  _default: ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'],
-  mora: [['Kit de café: prensa francesa + 250 g de especialidad', 'Café de especialidad', 'ARS 38.000'], ['Monstera chica con maceta de cerámica', 'Plantas', 'ARS 25.000'], ['Entradas para el teatro', 'Experiencias', 'ARS 30.000'], ['Taller de torno de cerámica', 'Cerámica', 'ARS 45.000']],
-  teo: [['Lego Jurassic World', 'Lego · Dinosaurios', 'ARS 60.000'], ['Camiseta de River 2026', 'River', 'ARS 75.000'], ['Libro de dinosaurios con realidad aumentada', 'Dinosaurios', 'ARS 22.000']],
-  nelly: [['Caja de alfajores Havanna x12', 'Alfajores Havanna', 'ARS 28.000'], ['"El viento conoce mi nombre", de Isabel Allende', 'Isabel Allende', 'ARS 24.000'], ['Kit de agujas de bambú', 'Tejer', 'ARS 15.000']],
-  caro: [['Box de sushi para dos', 'Sushi', 'ARS 40.000'], ['Clase de yoga al aire libre', 'Yoga', 'ARS 20.000'], ['Chocolates amargos Rapanui', 'Chocolate amargo', 'ARS 18.000']],
-  fede: [['Malbec de Valle de Uco', 'Vino malbec', 'ARS 30.000'], ['Riñonera para correr', 'Running', 'ARS 19.000']],
-};
+// Base de gustos: palabras sueltas agrupadas, cada una con ideas de regalo. Las sugerencias salen de acá.
+// (SwiftUI: un JSON en el bundle; se puede ampliar sin tocar código)
+const GUSTOS = [
+  ['Comida y bebida', [
+    ['Café', [['Kit de café: prensa francesa + 250 g de especialidad', 'ARS 38.000'], ['Taza térmica linda', 'ARS 18.000']]],
+    ['Mate', [['Mate de calabaza con bombilla de alpaca', 'ARS 26.000'], ['Yerba con hierbas en lata', 'ARS 9.000']]],
+    ['Vino', [['Malbec de Valle de Uco', 'ARS 30.000'], ['Cata de vinos para dos', 'ARS 45.000']]],
+    ['Cerveza', [['Box de cervezas artesanales', 'ARS 22.000'], ['Kit para hacer cerveza en casa', 'ARS 55.000']]],
+    ['Chocolate', [['Chocolates amargos Rapanui', 'ARS 18.000'], ['Taller de bombones', 'ARS 35.000']]],
+    ['Alfajores', [['Caja de alfajores Havanna x12', 'ARS 28.000']]],
+    ['Sushi', [['Box de sushi para dos', 'ARS 40.000'], ['Kit para hacer sushi en casa', 'ARS 24.000']]],
+    ['Cocina', [['Clase de cocina', 'ARS 40.000'], ['Cuchillo de chef', 'ARS 50.000'], ['Libro de recetas de Narda Lepes', 'ARS 30.000']]],
+    ['Asado', [['Set de cuchillos para asado', 'ARS 35.000'], ['Tabla de madera para picadas', 'ARS 20.000']]],
+    ['Pastelería', [['Batidora de mano', 'ARS 45.000'], ['Set de moldes y mangas', 'ARS 16.000']]],
+    ['Té', [['Caja de tés en hebras', 'ARS 15.000'], ['Tetera de vidrio con infusor', 'ARS 20.000']]],
+  ]],
+  ['Deportes', [
+    ['Fútbol', [['Pelota oficial', 'ARS 40.000'], ['Entradas para la cancha', 'ARS 35.000']]],
+    ['River', [['Camiseta de River 2026', 'ARS 75.000'], ['Visita al Monumental', 'ARS 25.000']]],
+    ['Boca', [['Camiseta de Boca 2026', 'ARS 75.000'], ['Visita a la Bombonera', 'ARS 25.000']]],
+    ['Running', [['Riñonera para correr', 'ARS 19.000'], ['Inscripción a una carrera de 10K', 'ARS 30.000']]],
+    ['Yoga', [['Mat de yoga', 'ARS 28.000'], ['Clase de yoga al aire libre', 'ARS 20.000']]],
+    ['Gimnasio', [['Botella térmica', 'ARS 20.000'], ['Bandas elásticas', 'ARS 12.000']]],
+    ['Bici', [['Luces para la bici', 'ARS 18.000'], ['Bolso para el manubrio', 'ARS 22.000']]],
+    ['Natación', [['Antiparras con estuche', 'ARS 15.000'], ['Toalla de microfibra', 'ARS 14.000']]],
+    ['Tenis', [['Tubo de pelotas y overgrips', 'ARS 16.000'], ['Clase con profe', 'ARS 25.000']]],
+    ['Pádel', [['Paletero', 'ARS 35.000'], ['Pelotas de pádel x3', 'ARS 12.000']]],
+    ['Montaña', [['Linterna frontal', 'ARS 20.000'], ['Mochila de trekking', 'ARS 70.000']]],
+  ]],
+  ['Música', [
+    ['Música', [['Parlante bluetooth', 'ARS 45.000'], ['Entradas para un recital', 'ARS 60.000']]],
+    ['Vinilos', [['Un vinilo de su banda favorita', 'ARS 50.000'], ['Bandeja giradiscos', 'ARS 180.000']]],
+    ['Taylor Swift', [['Vinilo de Taylor Swift', 'ARS 55.000'], ['Pulseras de la amistad para armar', 'ARS 10.000']]],
+    ['Rock nacional', [['Libro de la historia del rock nacional', 'ARS 28.000'], ['Remera de Soda Stereo', 'ARS 25.000']]],
+    ['Guitarra', [['Juego de cuerdas y púas', 'ARS 15.000'], ['Afinador', 'ARS 12.000']]],
+    ['Piano', [['Libro de partituras', 'ARS 20.000']]],
+    ['Podcasts', [['Auriculares inalámbricos', 'ARS 60.000']]],
+  ]],
+  ['Lectura y cine', [
+    ['Libros', [['Gift card de una librería', 'ARS 25.000'], ['Lámpara de lectura', 'ARS 18.000']]],
+    ['Isabel Allende', [['"El viento conoce mi nombre", de Isabel Allende', 'ARS 24.000']]],
+    ['Novelas', [['La última novela de Claudia Piñeiro', 'ARS 25.000']]],
+    ['Historietas', [['Mafalda: todas las tiras', 'ARS 40.000'], ['El Eternauta', 'ARS 35.000']]],
+    ['Manga', [['Tomo 1 de un manga nuevo', 'ARS 12.000']]],
+    ['Series', [['Un mes de una plataforma', 'ARS 10.000'], ['Manta para el sillón', 'ARS 30.000']]],
+    ['Cine', [['Entradas para el cine con pochoclos', 'ARS 20.000'], ['Proyector chico', 'ARS 120.000']]],
+    ['Teatro', [['Entradas para el teatro', 'ARS 30.000']]],
+  ]],
+  ['Casa y plantas', [
+    ['Plantas', [['Monstera chica con maceta de cerámica', 'ARS 25.000'], ['Kit de huerta en el balcón', 'ARS 20.000']]],
+    ['Suculentas', [['Terrario con suculentas', 'ARS 22.000']]],
+    ['Deco', [['Lámpara de mesa', 'ARS 35.000'], ['Lámina enmarcada', 'ARS 25.000']]],
+    ['Velas', [['Vela de soja aromática', 'ARS 14.000'], ['Difusor de aromas', 'ARS 20.000']]],
+    ['Perros', [['Correa y collar lindos', 'ARS 18.000'], ['Cama para perro', 'ARS 35.000']]],
+    ['Gatos', [['Rascador', 'ARS 30.000'], ['Fuente de agua para gatos', 'ARS 28.000']]],
+  ]],
+  ['Arte y manualidades', [
+    ['Cerámica', [['Taller de torno de cerámica', 'ARS 45.000'], ['Taza de cerámica artesanal', 'ARS 15.000']]],
+    ['Tejer', [['Kit de agujas de bambú', 'ARS 15.000'], ['Ovillos de lana merino', 'ARS 20.000']]],
+    ['Dibujo', [['Set de lápices acuarelables', 'ARS 22.000'], ['Cuaderno de bocetos', 'ARS 12.000']]],
+    ['Fotografía', [['Cámara instantánea', 'ARS 90.000'], ['Impresión de fotos en álbum', 'ARS 25.000']]],
+    ['Costura', [['Caja de costura completa', 'ARS 20.000']]],
+  ]],
+  ['Tecnología y juegos', [
+    ['Videojuegos', [['Gift card de PlayStation', 'ARS 30.000'], ['Joystick extra', 'ARS 70.000']]],
+    ['Juegos de mesa', [['Catan', 'ARS 45.000'], ['Dixit', 'ARS 40.000']]],
+    ['Tecnología', [['Cargador portátil', 'ARS 25.000'], ['Smartwatch', 'ARS 120.000']]],
+    ['Lego', [['Lego Technic', 'ARS 60.000'], ['Lego Jurassic World', 'ARS 60.000']]],
+    ['Dinosaurios', [['Libro de dinosaurios con realidad aumentada', 'ARS 22.000'], ['Kit de excavación de fósiles', 'ARS 15.000']]],
+  ]],
+  ['Estilo y cuidado', [
+    ['Moda', [['Gift card de su marca favorita', 'ARS 40.000']]],
+    ['Perfumes', [['Perfume en tamaño viaje', 'ARS 45.000']]],
+    ['Skincare', [['Set de cuidado de la piel', 'ARS 35.000']]],
+    ['Relojes', [['Correa nueva para su reloj', 'ARS 20.000']]],
+  ]],
+  ['Salidas y viajes', [
+    ['Viajes', [['Neceser de viaje', 'ARS 18.000'], ['Almohada de viaje', 'ARS 15.000']]],
+    ['Camping', [['Farol recargable', 'ARS 20.000'], ['Silla plegable', 'ARS 30.000']]],
+    ['Experiencias', [['Escape room para dos', 'ARS 30.000'], ['Paseo en kayak', 'ARS 35.000']]],
+    ['Spa', [['Día de spa', 'ARS 60.000']]],
+    ['Playa', [['Lona de playa', 'ARS 20.000'], ['Parlante resistente al agua', 'ARS 40.000']]],
+  ]],
+];
+const gNorm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const GUSTO_LIST = GUSTOS.flatMap(([, items]) => items);
+// Un gusto anotado ("Café de especialidad") encuentra su palabra de la base ("Café")
+function gustoMatch(g) {
+  const n = gNorm(g);
+  return GUSTO_LIST.find(([w]) => gNorm(w) === n) || GUSTO_LIST.find(([w]) => n.split(/\s+/).includes(gNorm(w)) || gNorm(w).split(/\s+/).includes(n));
+}
+// Sugerencias: las ideas de cada gusto, intercaladas para que no salgan todas del mismo
+function suggestionsFor(p) {
+  const per = p.gustos.map(g => { const m = gustoMatch(g); return m ? m[1].map(([what, price]) => [what, g, price]) : []; });
+  const out = [];
+  for (let i = 0; per.some(l => l[i]); i++) per.forEach(l => { if (l[i] && !out.some(o => o[0] === l[i][0])) out.push(l[i]); });
+  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', '']);
+}
+const SUGGESTIONS_DEFAULT = ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'];
 
 /* ---------------- Estado ---------------- */
 const LS = 'ub-proto-v1';
@@ -367,14 +458,14 @@ function screenSpecial(id) {
 
 function screenSuggest(id) {
   const p = person(id);
-  const list = SUGGESTIONS[id] || SUGGESTIONS._default.map(t => [t, 'General', '']);
+  const list = suggestionsFor(p);
   const given = p.gifts.map(g => g.what.toLowerCase());
   const rows = list.map(([what, why, price], i) => {
     const prev = p.gifts.find(g => similar(g.what, what));
     const savedIdea = p.ideas.some(x => x.what === what);
     return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}${price ? ` · ${price}` : ''}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-i="${i}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
-  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` + section(rows, { cls: '', footer: 'Las sugerencias se generan en el teléfono a partir de los gustos que anotaste. (En el prototipo son fijas.)' });
+  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` + section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Se arman en el teléfono, sin internet.' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(p.name.split(' ')[0]), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function similar(a, b) {
@@ -417,6 +508,9 @@ function screenGifts() {
       ${mock('✨', p && p.gustos[0] ? `Algo de ${esc(p.gustos[0])}` : 'Una idea para vos', `Sugerencia para ${esc(p ? p.name.split(' ')[0] : 'Mora')}`)}${mock('🔗', 'Vinilo de Taylor Swift', 'Guardada desde Mercado Libre')}</div></div>
       <div class="wk-info"><div class="grow"><div class="t">Ideas de regalo</div><div class="s">Guardá ideas desde Safari o Mercado Libre con <b>Compartir</b>, y recibí sugerencias según sus gustos.</div></div>${lockBadge()}</div></button>`;
   } else {
+    const np = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d))[0];
+    if (np) h += gkCard(`<div class="gk-head gk-person">${cakeIcon(np)}<span class="t">Sugerencias para ${esc(np.name.split(' ')[0])}</span></div>`,
+      suggestionsFor(np).slice(0, 3).map(([what, why]) => `<button class="gk-row" data-a="suggest" data-id="${np.id}"><span class="gk-bulb">${ic('sparkles', '', 2)}</span><span class="grow"><div class="w-rname">${esc(what)}</div><div class="w-sub">Porque le gusta: ${esc(why)}</div></span>${chev()}</button>`).join(''));
     const withIdeas = S.people.filter(p => p.ideas.length);
     for (const p of withIdeas) h += gkCard(`<div class="gk-head gk-person">${cakeIcon(p)}<span class="t">${esc(p.name)}</span></div>`,
       p.ideas.map(i => `<button class="gk-row" data-a="open" data-id="${p.id}"><span class="gk-bulb">${ic('bulb', '', 2)}</span><span class="grow"><div class="w-rname">${esc(i.what)}</div><div class="w-sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join(''));
@@ -657,11 +751,24 @@ function sheetGift(o) {
   if (p.gifts.length) h += section(p.gifts.map(g => `<div class="row"><span class="grow">${esc(g.what)}</span><span class="value">${g.year}</span></div>`).join(''), { header: `Ya le regalaste a ${esc(p.name.split(' ')[0])}` });
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: o.combo ? 'Regalo' : isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
 }
+function gustoChips(o) {
+  const p = person(o.id), q = gNorm(o.text.trim());
+  const chip = w => `<button class="chip ${p.gustos.includes(w) ? 'sel' : ''}" data-a="gustoToggle" data-v="${esc(w)}">${esc(w)}</button>`;
+  let h = '';
+  if (q) {
+    const hits = GUSTO_LIST.filter(([w]) => gNorm(w).includes(q)).map(([w]) => w);
+    const exact = hits.some(w => gNorm(w) === q) || p.gustos.some(g => gNorm(g) === q);
+    h += section(`<div class="chips">${hits.map(chip).join('')}${exact ? '' : `<button class="chip add" data-a="gustoToggle" data-v="${esc(o.text.trim())}">＋ Agregar “${esc(o.text.trim())}”</button>`}</div>`, { header: 'Resultados' });
+  } else {
+    for (const [cat, items] of GUSTOS) h += section(`<div class="chips">${items.map(([w]) => chip(w)).join('')}</div>`, { header: cat });
+  }
+  return h;
+}
 function sheetGusto(o) {
-  const p = person(o.id);
-  const sugg = ['Café', 'Libros', 'Fútbol', 'Vino', 'Plantas', 'Música', 'Series', 'Cocina', 'Viajes', 'Chocolate', 'Mate', 'Videojuegos'].filter(s => !p.gustos.includes(s));
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Agregar gusto', right: `<button class="navbtn bold" id="saveBtn" data-a="gustoSave" ${o.text.trim() ? '' : 'disabled'}>Agregar</button>` }) +
-    `<div class="scroll">${section(`<div class="row"><input class="field" id="gustoText" placeholder="Ej: Café de especialidad" value="${esc(o.text)}" autocomplete="off"></div>`)}${section(`<div class="chips">${sugg.map(s => `<button class="chip" data-a="gustoQuick" data-v="${s}">${s}</button>`).join('')}</div>`, { header: 'Ideas rápidas' })}</div>`, { medium: true });
+  const p = person(o.id), first = esc(p.name.split(' ')[0]);
+  const mine = p.gustos.length ? `<div class="chips">${p.gustos.map(g => `<button class="chip sel" data-a="gustoToggle" data-v="${esc(g)}">${esc(g)} ✕</button>`).join('')}</div>` : `<div class="row"><span class="grow sub" style="margin:0">Tocá los que le gustan. Con eso armamos las sugerencias de regalo.</span></div>`;
+  return sheetWrap(o, navbar({ left: '', title: `Gustos de ${first}`, right: `<button class="navbtn bold" data-a="dismiss">Listo</button>` }) +
+    `<div class="scroll"><label class="search">${ic('search', '', 2.2)}<input id="gustoText" type="search" placeholder="Buscar o escribir un gusto" value="${esc(o.text)}" autocomplete="off"></label>${section(mine, { header: `Le gusta (${p.gustos.length})` })}<div id="gustoList">${gustoChips(o)}</div></div>`);
 }
 function sheetRemindPerson(o) {
   const p = person(o.id);
@@ -832,13 +939,12 @@ const A = {
     S.overlays.pop(); persist(); toast(o.s === 'gift' ? 'Regalo anotado' : 'Idea guardada', '🎁');
   },
   addGusto(d) { present({ s: 'gusto', id: d.id, text: '' }); },
-  gustoQuick(d) { const o = topOverlay(); person(o.id).gustos.push(d.v); S.overlays.pop(); persist(); render(); },
-  gustoSave() { const o = topOverlay(); if (!o.text.trim()) return; person(o.id).gustos.push(o.text.trim()); S.overlays.pop(); persist(); render(); },
+  gustoToggle(d) { const o = topOverlay(), p = person(o.id), i = p.gustos.indexOf(d.v); if (i >= 0) p.gustos.splice(i, 1); else { p.gustos.push(d.v); o.text = ''; } persist(); render(); },
   remindPerson(d) { present({ s: 'remindPerson', id: d.id }); },
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },
   tzSet(d) { const o = topOverlay(); person(o.id).tz = d.v === 'null' ? null : d.v; persist(); render(); },
-  saveSuggestion(d) { const p = person(d.id); const sug = (SUGGESTIONS[d.id] || SUGGESTIONS._default.map(t => [t]))[+d.i]; p.ideas.push({ what: sug[0], src: 'Desde sugerencias' }); persist(); toast('Idea guardada', '💡'); },
+  saveSuggestion(d) { const p = person(d.id); const sug = suggestionsFor(p)[+d.i]; p.ideas.push({ what: sug[0], src: 'Desde sugerencias' }); persist(); toast('Idea guardada', '💡'); },
   remToggle(d) { S.rem[d.k] = !S.rem[d.k]; persist(); render(); },
   remBefore(d) { S.rem.before = +d.v; persist(); render(); },
   remRound(d) { S.rem.roundBefore = +d.v; persist(); render(); },
@@ -893,7 +999,7 @@ phone.addEventListener('input', e => {
   if (t.id === 'findQ') { o.q = t.value; render(); return; }
   if (t.id === 'edNotes') { o.draft.notes = t.value; return; }
   if (t.id === 'giftWhat') { o.draft.what = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); document.getElementById('giftWarn').innerHTML = giftWarning(person(o.id), t.value); return; }
-  if (t.id === 'gustoText') { o.text = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
+  if (t.id === 'gustoText') { o.text = t.value; document.getElementById('gustoList').innerHTML = gustoChips(o); return; }
   if (t.classList.contains('bulk-name')) { o.rows.find(r => r.id === t.dataset.id).name = t.value; document.getElementById('saveBtn').disabled = !o.rows.every(rowOk); return; }
   if (t.id === 'specName') { o.draft.name = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
 });

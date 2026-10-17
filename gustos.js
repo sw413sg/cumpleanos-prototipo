@@ -1,5 +1,5 @@
 // Base de gustos de Unforgettables. Cada gusto es una palabra suelta, con sinónimos (para reconocer lo que la gente
-// escribe a mano) y cinco ideas de regalo de distintos precios. Las sugerencias salen solo de acá.
+// escribe a mano) y cinco ideas de regalo de distintos precios (el precio no se muestra; sirve para mezclarlas). Las sugerencias salen solo de acá.
 // SwiftUI: este mismo contenido va como gustos.json en el bundle (funciona sin internet y se amplía sin tocar código).
 // Formato: [grupo, [[gusto, 'sinónimo|sinónimo', [[idea, precio en miles de pesos], ...]], ...]]
 const GUSTOS = [

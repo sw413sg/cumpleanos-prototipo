@@ -59,6 +59,7 @@ const P = {
   heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.3 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z"/>',
   briefcase: '<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V5.5a1.5 1.5 0 011.5-1.5h3A1.5 1.5 0 0115 5.5v2M3.5 13h17"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.7 5.5 3.7 9s-1.2 6.5-3.7 9c-2.5-2.5-3.7-5.5-3.7-9S9.5 5.5 12 3z"/>',
+  camera: '<path d="M4 8.5A1.5 1.5 0 015.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0120 8.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 17.5z"/><circle cx="12" cy="12.8" r="3.3"/>',
   people: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.4.2 4 1.7 4.5 4.4"/>',
   sparkles: '<path d="M10 3.5l1.6 4.6 4.6 1.6-4.6 1.6L10 16l-1.6-4.7-4.6-1.6 4.6-1.6zM17.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
   message: '<path d="M12 4C7 4 3.5 7.2 3.5 11c0 2 1 3.8 2.6 5.1L5.5 20l4-1.9c.8.2 1.6.3 2.5.3 5 0 8.5-3.2 8.5-7.2S17 4 12 4z"/>',
@@ -499,16 +500,16 @@ const canSave = dr => dr.name.trim() && !leapErr(dr);
 
 function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
-  let h = editing ? '' : addKindSwitch('cumple') + section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
-  const face = dr.photo ? `<div class="avatar photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.8).replace('<svg', '<svg style="width:26px;height:26px"')}</div>`;
-  h += section(`<div class="row ed-head"><button class="ed-photo" data-a="edPhoto" aria-label="${dr.photo ? 'Cambiar foto' : 'Agregar foto'}">${face}<span>${dr.photo ? 'Cambiar' : 'Foto'}</span></button><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`);
+  let h = editing ? '' : addKindSwitch('cumple') + `<button class="bulk-btn" data-a="bulkAdd"><span class="kp-ic">${ic('people', '', 2)}</span><span class="grow">Agregar masivamente contactos<div class="sub">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`;
+  const face = dr.photo ? `<div class="avatar photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar" style="background:linear-gradient(160deg,#ff8a95,#e23d4a 60%,#b31b55)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.8).replace('<svg', '<svg style="width:26px;height:26px"')}</div>`;
+  h += `<div class="ed-head"><button class="ed-photo" data-a="edPhoto" aria-label="${dr.photo ? 'Cambiar foto' : 'Agregar foto'}">${face}<span class="ed-cam">${ic('camera', '', 2)}</span></button><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`;
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
     { header: 'Fecha', footer: dr.includeYear ? '' : 'Sin año no mostramos la edad, solo el día y el mes.' });
   h += section(`<div class="row has-icon"><span class="icon-sq" style="background:#5856d6">${ic('briefcase', '', 2)}</span><span class="grow">Es de trabajo</span>${S.unlocked ? toggle(dr.work, 'edWork') : `<button data-a="paywall" data-f="work">${lockBadge()}</button>`}</div>` +
     `<div class="row has-icon"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">Vive en otro país</span>${S.unlocked ? `<span class="value">${dr.tz || 'No'}</span>` : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>` +
     `<div class="row"><textarea class="field" id="edNotes" placeholder="Notas (talle, alergias, qué evitar…)">${esc(dr.notes || '')}</textarea></div>`, { header: 'Más' });
   if (editing) h += section(`<button class="row destructive" data-a="askDelete">Eliminar persona</button>`);
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: editing ? 'Editar' : 'Nueva persona', right: `<button class="navbtn bold" id="saveBtn" data-a="edSave" ${canSave(dr) ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll" data-key="editor">${h}</div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: editing ? 'Editar' : '', right: `<button class="navbtn bold" id="saveBtn" data-a="edSave" ${canSave(dr) ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll" data-key="editor">${h}</div>`);
 }
 
 function sheetImport(o) {
@@ -570,11 +571,13 @@ function sheetTz(o) {
   return sheetWrap(o, navbar({ title: 'Dónde vive', right: `<button class="navbtn bold" data-a="dismiss">OK</button>` }) + `<div class="scroll">${section(checkList(opts, p.tz ?? 'null', 'tzSet'), { footer: 'El aviso del día te llega cuando allá ya es su cumple.' })}</div>`, { medium: true });
 }
 // Selector de arriba al tocar +: qué querés agregar
-const addKindSwitch = cur => `<div class="segmented"><button class="${cur === 'cumple' ? 'sel' : ''}" data-a="addKind" data-v="cumple">Cumpleaños</button><button class="${cur === 'fecha' ? 'sel' : ''}" data-a="addKind" data-v="fecha">Fecha${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
+// Mismo estilo que los banners del inicio: el elegido se pinta con su degradé (confeti o corazones)
+const kindBtn = (k, cur, label, icon, deco) => `<button class="kp ${k}${cur === k ? ' sel' : ''}" data-a="addKind" data-v="${k}">${cur === k ? `<span class="${deco}"></span>` : ''}<span class="kp-ic">${ic(icon, '', 2)}</span><span class="kp-t">${label}</span>${k === 'fecha' && !S.unlocked ? ic('lock', 'kp-lock', 2.6) : ''}</button>`;
+const addKindSwitch = cur => `<div class="kind-pick">${kindBtn('cumple', cur, 'Cumpleaños', 'cake', 'confetti')}${kindBtn('fecha', cur, 'Fecha', 'heart', 'hearts')}</div>`;
 function sheetAddSpecial(o) {
   const dr = o.draft;
   const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Fecha del año', '📅'], ['Otra', '⭐️']];
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: dr.id ? 'Editar fecha' : 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: dr.id ? 'Editar fecha' : o.fromPlus ? '' : 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
     `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
 }
 

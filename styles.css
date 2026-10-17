@@ -162,7 +162,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .segmented svg { width: 11px; height: 11px; color: var(--accent); }
 
 /* TabView */
-.tabbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; justify-content: space-around; padding: 7px 0 calc(var(--safe-bottom) + 4px); background: var(--bar); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-top: .5px solid var(--sep); }
+.tabbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; justify-content: space-around; padding: 7px 44px calc(var(--safe-bottom) + 4px); /* tres pestañas: más juntas al centro */ background: var(--bar); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-top: .5px solid var(--sep); }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 500; color: #999; width: 80px; letter-spacing: .1px; }
 .tab svg { width: 26px; height: 26px; }
 .tab.sel { color: var(--accent); }

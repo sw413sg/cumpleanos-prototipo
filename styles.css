@@ -413,6 +413,9 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .ed-photo { position: relative; flex: none; }
 .ed-photo .avatar { width: 64px; height: 64px; font-size: 24px; }
 .ed-cam { position: absolute; right: -2px; bottom: -2px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; border: 2px solid var(--cell); }
+.ed-find { flex: none; height: 44px; padding: 0 12px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font-size: 15px; font-weight: 600; }
+.ed-find svg { width: 15px; height: 15px; }
+.ed-head { gap: 10px; }
 .ed-cam svg { width: 13px; height: 13px; }
 .ed-head .field { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 12px; background: var(--fill); font-size: 19px; font-weight: 600; }
 .hero .t1, .hero .t2, .hero .t3 { text-shadow: 0 1px 6px rgba(0,0,0,.35), 0 0 2px rgba(0,0,0,.25); }

@@ -502,7 +502,7 @@ function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
   let h = editing ? '' : addKindSwitch('cumple');
   const face = dr.photo ? `<div class="avatar photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar" style="background:linear-gradient(160deg,#ff8a95,#e23d4a 60%,#b31b55)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.8).replace('<svg', '<svg style="width:26px;height:26px"')}</div>`;
-  h += `<div class="ed-head"><button class="ed-photo" data-a="edPhoto" aria-label="${dr.photo ? 'Cambiar foto' : 'Agregar foto'}">${face}<span class="ed-cam">${ic('camera', '', 2)}</span></button><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`;
+  h += `<div class="ed-head"><button class="ed-photo" data-a="edPhoto" aria-label="${dr.photo ? 'Cambiar foto' : 'Agregar foto'}">${face}<span class="ed-cam">${ic('camera', '', 2)}</span></button><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"><button class="ed-find" data-a="findContact">${ic('search', '', 2.2)}Buscar</button></div>`;
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
     { header: 'Fecha', footer: dr.includeYear ? '' : 'Sin año no mostramos la edad, solo el día y el mes.' });
   if (!editing) h += `<button class="bulk-btn" data-a="bulkAdd"><span class="kp-ic">${ic('people', '', 2)}</span><span class="grow">Agregar masivamente contactos<div class="sub">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`;
@@ -513,6 +513,14 @@ function sheetEditor(o) {
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: editing ? 'Editar' : '', right: `<button class="navbtn bold" id="saveBtn" data-a="edSave" ${canSave(dr) ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll" data-key="editor">${h}</div>`);
 }
 
+// "Buscar" al lado del nombre: elegís un contacto y completa nombre, foto y fecha si la tiene
+function sheetFindContact(o) {
+  const q = o.q.trim().toLowerCase();
+  const list = AGENDA.filter(c => !q || c.name.toLowerCase().includes(q));
+  const rows = list.map(c => `<button class="row" data-a="findPick" data-id="${c.id}">${avatar(c)}<span class="grow"><div>${esc(c.name)}</div><div class="sub">${c.m ? esc(subtitle(c)) : 'Sin cumpleaños'}</div></span></button>`).join('');
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Contactos' }) +
+    `<div class="scroll"><label class="search">${ic('search', '', 2.2)}<input id="findQ" type="search" placeholder="Buscar" value="${esc(o.q)}" autocomplete="off"></label>${list.length ? section(rows, { header: `${list.length} contactos` }) : `<div class="empty"><p>No hay contactos con ese nombre.</p></div>`}</div>`);
+}
 function sheetImport(o) {
   if (o.rows) return sheetBulkReview(o);
   const dupe = c => S.people.some(p => p.name === c.name);
@@ -625,7 +633,7 @@ function coverOnboarding(o) {
   return `<div class="full-cover ${o.fresh ? 'anim' : ''}"><div class="ob"><div class="art">${art}</div><h1>${title}</h1><p>${text}</p>${dots}<div class="stack">${btns}</div></div></div>`;
 }
 
-const OVERLAYS = { editor: sheetEditor, import: sheetImport, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, share: sheetShare, pick: sheetPick, onboarding: coverOnboarding };
+const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, share: sheetShare, pick: sheetPick, onboarding: coverOnboarding };
 
 function dialogHtml(d) {
   if (d.type === 'alert') return `<div class="alert-wrap"><div class="alert ${d.fresh ? 'anim' : ''}"><div class="body"><div class="t">${d.title}</div><div class="m">${d.msg}</div></div><div class="btns">${d.buttons.map(b => `<button data-a="${b.a}">${b.label}</button>`).join('')}</div></div></div>`;
@@ -705,6 +713,11 @@ const A = {
   impAdd() { const o = topOverlay(); let n = 0; for (const r of o.rows) { if (S.people.some(p => p.name === r.name.trim())) continue; S.people.push({ id: 'imp-' + r.id, name: r.name.trim(), m: r.m, d: r.d, y: r.y, gustos: [], gifts: [], ideas: [], notes: '', work: false, tz: null, remind: null, photo: r.photo }); n++; } S.overlays.pop(); persist(); toast(`Agregaste ${n} cumpleaños`, '🎉'); },
   edYear() { const dr = topOverlay().draft; dr.includeYear = !dr.includeYear; render(); },
   edWork() { const dr = topOverlay().draft; dr.work = !dr.work; render(); },
+  findContact() { present({ s: 'findContact', q: '' }); },
+  findPick(d) { const c = AGENDA.find(x => x.id === d.id); S.overlays.pop(); const dr = topOverlay().draft; dr.name = c.name; dr.photo = !!c.photo; if (c.m) { dr.m = c.m; dr.d = c.d; } if (c.y) { dr.y = c.y; dr.includeYear = true; }
+    // render() lee las ruedas del DOM: las movemos antes para que no pisen la fecha del contacto
+    phone.querySelectorAll('.wheel').forEach(w => { const i = w.dataset.vals.split(',').map(Number).indexOf(dr[w.dataset.wheel]); if (i >= 0) w.scrollTop = i * 36; });
+    render(); },
   edPhoto() { const dr = topOverlay().draft; dr.photo = !dr.photo; render(); },
   edSave() {
     const o = topOverlay(), dr = o.draft; if (!canSave(dr)) return;
@@ -782,6 +795,7 @@ phone.addEventListener('input', e => {
   const t = e.target, o = topOverlay();
   if (t.id === 'search') { S.search = t.value; render(); return; }
   if (t.id === 'edName') { o.draft.name = t.value; document.getElementById('saveBtn').disabled = !canSave(o.draft); return; }
+  if (t.id === 'findQ') { o.q = t.value; render(); return; }
   if (t.id === 'edNotes') { o.draft.notes = t.value; return; }
   if (t.id === 'giftWhat') { o.draft.what = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); document.getElementById('giftWarn').innerHTML = giftWarning(person(o.id), t.value); return; }
   if (t.id === 'gustoText') { o.text = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }

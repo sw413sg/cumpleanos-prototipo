@@ -104,7 +104,7 @@ function demoPeople() {
     P2({ id: 'mora', name: 'Mora Díaz', m: r(0)[0], d: r(0)[1], y: 1994, photo: true, gustos: ['Café de especialidad', 'Plantas', 'Taylor Swift', 'Cerámica'],
       gifts: [{ year: THIS_YEAR - 1, what: 'Taza de cerámica artesanal' }, { year: THIS_YEAR - 2, what: 'Entradas para el teatro' }],
       ideas: [{ what: 'Vinilo de Taylor Swift', src: 'Guardada desde Mercado Libre' }] }),
-    P2({ id: 'teo', name: 'Teo Ruiz', m: r(1)[0], d: r(1)[1], y: 2015, gustos: ['Lego', 'River', 'Dinosaurios'], gifts: [{ year: THIS_YEAR - 1, what: 'Lego Technic' }], notes: 'Sobrino. Talle 12.' }),
+    P2({ id: 'teo', name: 'Teo Ruiz', m: r(1)[0], d: r(1)[1], y: 2015, gustos: ['Lego', 'River', 'Dinosaurios'], gifts: [{ year: THIS_YEAR - 1, what: 'Lego Technic' }], notes: 'Talle 12' }),
     P2({ id: 'nelly', name: 'Abuela Nelly', m: r(9)[0], d: r(9)[1], y: THIS_YEAR - 80 + (nextDate(r(9)[0], r(9)[1]).getFullYear() - THIS_YEAR), gustos: ['Tejer', 'Isabel Allende', 'Alfajores Havanna'],
       gifts: [{ year: THIS_YEAR - 1, what: 'Ovillos de lana merino' }, { year: THIS_YEAR - 2, what: 'Libro "Violeta"' }] }),
     P2({ id: 'fede', name: 'Fede Martínez', m: r(23)[0], d: r(23)[1], y: 1996, work: true, gustos: ['Running', 'Asado', 'Vino malbec'], notes: 'Compañero de equipo. Le gusta el fernet.' }),
@@ -371,7 +371,7 @@ function screenDetail(id) {
   h += section(rem, { header: 'Recordatorio', footer: p.tz && S.unlocked ? `${esc(p.name.split(' ')[0])} vive en ${esc(p.tz)}: el aviso del día te llega cuando allá ya es su cumple.` : '' });
   // Regalos: gustos, ideas y lo que ya le regalaste, todo junto (el botón Regalo de arriba trae acá)
   h += giftBox(p);
-  if (p.notes && (!p.work || S.unlocked)) h += section(`<div class="row"><span class="grow">${esc(p.notes)}</span></div>`, { header: p.work ? 'Notas · Trabajo' : 'Notas' });
+  if (p.notes && (!p.work || S.unlocked)) h += section(`<div class="row"><span class="grow" style="font-style:italic;opacity:.55">${esc(p.notes)}</span></div>`, { header: p.work ? 'Notas · Trabajo' : 'Notas' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}" data-key="detail">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="edit" data-id="${p.id}">Editar</button>`, blur: true })}<div class="scroll" data-key="detail-${p.id}">${h}</div></div>`;
 }
 const beforeLabel = n => n === 0 ? 'Solo el mismo día' : n === 1 ? '1 día antes' : n === 7 ? '1 semana antes' : n === 14 ? '2 semanas antes' : `${n} días antes`;

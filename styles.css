@@ -345,3 +345,30 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .segmented button.sel { background: var(--seg-sel, var(--cell)); }
 :root[data-theme="dark"] { --seg-sel: #636366; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --seg-sel: #636366; } }
+
+/* ---------- Vista calendario de la lista ---------- */
+/* SwiftUI: header con Button(chevron) + LazyVGrid(columns: 7) dentro de una celda agrupada */
+.cal { margin: 0 16px 28px; background: var(--cell); border-radius: 14px; padding: 12px 10px 10px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 10px; }
+.cal-title { text-align: center; }
+.cal-title .m { font-size: 22px; font-weight: 700; letter-spacing: .35px; }
+.cal-title .y { font-size: 13px; color: var(--label2); font-variant-numeric: tabular-nums; }
+.cal-arrow { width: 40px; height: 40px; border-radius: 50%; background: var(--fill); color: var(--accent); display: grid; place-items: center; }
+.cal-arrow svg { width: 16px; height: 16px; }
+.cal-arrow svg.flip { transform: scaleX(-1); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-wd { text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--label2); letter-spacing: .2px; padding-bottom: 4px; }
+.cal-wd.wknd { color: var(--label3); }
+.cal-day { position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; background: var(--fill); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-variant-numeric: tabular-nums; }
+.cal-day .n { font-size: 17px; font-weight: 600; line-height: 1; }
+.cal-day.wknd .n { color: var(--label2); }
+.cal-day .hoy { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: .3px; line-height: 1; }
+.cal-day .marks { display: flex; gap: 2px; height: 7px; align-items: center; }
+.cal-day .marks i { width: 7px; height: 7px; border-radius: 50%; }
+.cal-day .marks i.sp { background: var(--purple); }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cal-day.sel { background: var(--accent); }
+.cal-day.sel .n, .cal-day.sel .hoy, .cal-day.sel.wknd .n { color: #fff; }
+.cal-day.sel .marks i { box-shadow: 0 0 0 1.5px #fff; }
+.cal-foot { text-align: center; font-size: 13px; color: var(--label2); padding: 10px 0 2px; }
+.cal-foot button { color: var(--accent); font-size: 13px; }

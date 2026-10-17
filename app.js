@@ -144,7 +144,6 @@ function gustoMatch(g) {
   const names = ([w, syn]) => [gNorm(w), ...gNorm(syn).split('|')];
   return GUSTO_LIST.find(e => names(e).includes(n)) || GUSTO_LIST.find(e => names(e).some(x => words.includes(x) || x.split(/\s+/).includes(n)));
 }
-const priceLabel = k => `ARS ${k}.000`;
 // Presupuesto de las sugerencias, en miles de pesos
 const BUDGETS = [['all', 'Todos', 0, 1e9], ['low', 'Hasta 20 mil', 0, 20], ['mid', '20 a 50 mil', 21, 50], ['high', 'Más de 50 mil', 51, 1e9]];
 // Sugerencias: las ideas de cada gusto, intercaladas (y arrancando en precios distintos) para que no salgan todas iguales. [idea, gusto, precio]
@@ -333,12 +332,37 @@ function calendarBody() {
   return h;
 }
 
+// Sección Regalos de la ficha. Mismo estilo de tarjetas que Widgets y Regalos.
+function giftBox(p) {
+  const first = esc(p.name.split(' ')[0]);
+  const head = (icon, bg, t, s, extra = '') => `<div class="gb-head"><span class="gb-ic" style="background:${bg}">${ic(icon, '', 2.2)}</span><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div>${extra}</div>`;
+  const add = (a, label, extra = '') => `<button class="gb-add" data-a="${a}" data-id="${p.id}" ${extra}>${ic('plus', '', 2.6)}${label}</button>`;
+  // 1. Gustos
+  let h = `<div class="gb-block">${head('heart', 'linear-gradient(160deg,#ff8a95,#e23d4a)', 'Le gusta', p.gustos.length ? 'Con esto armamos las ideas.' : 'Elegí de la lista o escribí lo tuyo.')}
+    <div class="gb-chips">${p.gustos.map(g => `<span>${esc(g)}</span>`).join('')}${add('addGusto', p.gustos.length ? 'Gusto' : 'Agregar gustos')}</div></div>`;
+  // 2. Ideas (Unlock): las guardadas y las sugeridas por sus gustos
+  if (S.unlocked) {
+    const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w) && !p.gifts.some(g => similar(g.what, w))).slice(0, 2);
+    h += `<div class="gb-block">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', 'Guardá lo que se te ocurra, o una de las sugeridas.')}
+      ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(i.what)}<div class="s">${esc(i.src || 'Idea guardada')}</div></span></div>`).join('')}
+      ${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span><button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
+      <div class="gb-actions">${add('addIdea', 'Idea')}<button class="gb-link" data-a="suggest" data-id="${p.id}">Ver más sugerencias${chev()}</button></div></div>`;
+  } else {
+    h += `<button class="gb-block gb-locked" data-a="paywall" data-f="ideas">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', `Guardá ideas y recibí sugerencias según lo que le gusta a ${first}.`, lockBadge())}</button>`;
+  }
+  // 3. Lo que ya le regalaste
+  const gifts = [...p.gifts].sort((a, b) => b.year - a.year);
+  h += `<div class="gb-block">${head('gift', 'linear-gradient(160deg,#c86dd7,#af52de)', 'Ya se lo regalaste', 'Si vas a repetir, te avisamos.')}
+    ${gifts.map(g => `<div class="gb-row"><span class="grow">${esc(g.what)}</span><span class="gb-year">${g.year}</span></div>`).join('')}
+    <div class="gb-actions">${add('addGift', 'Anotar regalo')}</div></div>`;
+  return `<div class="section" id="regalos"><div class="section-header big">Regalos para ${first}</div><div class="gb">${h}</div></div>`;
+}
 function screenDetail(id) {
   const p = person(id); if (!p) return screenList();
   const n = daysLeft(p.m, p.d), age = turningAge(p);
   let h = `<div class="detail-head">${avatar(p, 'lg')}<h2>${esc(p.name)}</h2><div class="sub">${esc(subtitle(p))}</div></div>`;
   h += `<div class="stats"><div class="stat"><div class="n ${n === 0 ? 'accent' : ''}">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 0 ? '¡es su cumple!' : n === 1 ? 'día' : 'días'}</div></div><div class="stat"><div class="n">${age ?? '–'}</div><div class="l">${age ? 'años cumple' : 'sin año'}</div></div></div>`;
-  h += `<div class="quick"><button data-a="fake" data-msg="Abriría WhatsApp con un saludo armado">${ic('message')}Saludar</button><button data-a="fake" data-msg="Abriría el teléfono para llamar">${ic('phone')}Llamar</button><button data-a="addGift" data-id="${p.id}" data-combo="1">${ic('gift')}Regalo</button></div>`;
+  h += `<div class="quick"><button data-a="fake" data-msg="Abriría WhatsApp con un saludo armado">${ic('message')}Saludar</button><button data-a="fake" data-msg="Abriría el teléfono para llamar">${ic('phone')}Llamar</button><button data-a="toGifts">${ic('gift')}Regalo</button></div>`;
   if (isRound(age) && S.rem.round) {
     const roundTxt = S.rem.roundBefore === 30 ? '1 mes' : S.rem.roundBefore === 60 ? '2 meses' : '2 semanas';
     h += `<div class="banner"><div class="emoji">🎉</div><div><div class="t">¡Cumple ${age}! Es un cumple redondo</div><div class="s">Te avisamos ${roundTxt} antes para que organices algo grande.</div></div></div>`;
@@ -348,20 +372,8 @@ function screenDetail(id) {
   let rem = navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: esc(remTxt), a: 'remindPerson', extra: `data-id="${p.id}"` });
   rem += `<button class="row has-icon" data-a="tzPerson" data-id="${p.id}"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">A la hora de su país</span>${S.unlocked ? `<span class="value">${p.tz ? esc(p.tz) : 'Igual que vos'}</span>${chev()}` : lockBadge()}</button>`;
   h += section(rem, { header: 'Recordatorio', footer: p.tz && S.unlocked ? `${esc(p.name.split(' ')[0])} vive en ${esc(p.tz)}: el aviso del día te llega cuando allá ya es su cumple.` : '' });
-  // Gustos
-  h += section(`<div class="chips">${p.gustos.map((g, i) => `<span class="chip">${esc(g)}</span>`).join('')}<button class="chip add" data-a="addGusto" data-id="${p.id}">＋ Agregar</button></div>`, { header: 'Gustos', footer: p.gustos.length ? '' : 'Anotá qué le gusta: te sirve para elegir regalos.' });
-  // Historial
-  const gifts = [...p.gifts].sort((a, b) => b.year - a.year);
-  h += section(gifts.map(g => `<div class="row"><span class="grow">${esc(g.what)}</span><span class="value">${g.year}</span></div>`).join('') +
-    `<button class="row accent" data-a="addGift" data-id="${p.id}">${ic('plus', 'check', 2.2)}Agregar regalo</button>`, { header: 'Historial de regalos', footer: 'Si le querés regalar algo repetido, te avisamos.' });
-  // Ideas + sugerencias (pago)
-  if (S.unlocked) {
-    const ideas = p.ideas.map(i => `<div class="row"><span class="grow">${esc(i.what)}<div class="sub">${esc(i.src || 'Idea guardada')}</div></span></div>`).join('');
-    h += section(ideas + navRow({ icon: 'sparkles', color: '#ff9500', title: `Sugerencias para ${esc(p.name.split(' ')[0])}`, a: 'suggest', extra: `data-id="${p.id}"` }) +
-      `<button class="row accent" data-a="addIdea" data-id="${p.id}">${ic('plus', 'check', 2.2)}Agregar idea</button>`, { header: 'Ideas de regalo', footer: 'También podés guardar ideas desde Safari o Mercado Libre con el botón Compartir.' });
-  } else {
-    h += section(`<button class="row has-icon" data-a="paywall" data-f="ideas"><span class="icon-sq" style="background:#ff9500">${ic('sparkles', '', 2)}</span><span class="grow">Sugerencias e ideas de regalo<div class="sub">Según sus gustos, y guardadas desde Compartir</div></span>${lockBadge()}</button>`, { header: 'Ideas de regalo' });
-  }
+  // Regalos: gustos, ideas y lo que ya le regalaste, todo junto (el botón Regalo de arriba trae acá)
+  h += giftBox(p);
   if (p.notes && (!p.work || S.unlocked)) h += section(`<div class="row"><span class="grow">${esc(p.notes)}</span></div>`, { header: p.work ? 'Notas · Trabajo' : 'Notas' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}" data-key="detail">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="edit" data-id="${p.id}">Editar</button>`, blur: true })}<div class="scroll" data-key="detail-${p.id}">${h}</div></div>`;
 }
@@ -382,10 +394,10 @@ function screenSuggest(id) {
   const p = person(id);
   const list = suggestionsFor(p, S.budget);
   const given = p.gifts.map(g => g.what.toLowerCase());
-  const rows = list.map(([what, why, price], i) => {
+  const rows = list.map(([what, why]) => {
     const prev = p.gifts.find(g => similar(g.what, what));
     const savedIdea = p.ideas.some(x => x.what === what);
-    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}${price ? ` · ${priceLabel(price)}` : ''}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
+    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
   const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` +
     `<div class="chips" style="padding:0 16px 14px">${BUDGETS.map(([k, t]) => `<button class="chip ${S.budget === k ? 'sel' : ''}" data-a="budget" data-v="${k}">${t}</button>`).join('')}</div>` +
@@ -855,6 +867,7 @@ const A = {
   askDelete() { const o = topOverlay(); S.dialog = { type: 'confirm', title: `¿Eliminar a ${esc(o.draft.name || 'esta persona')}?`, actions: [{ label: 'Eliminar', a: 'doDelete', destructive: true }], fresh: true }; render(); },
   doDelete() { const o = topOverlay(); S.people = S.people.filter(p => p.id !== o.id); S.dialog = null; S.overlays.pop(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Persona eliminada', '🗑️'); },
   dialogCancel() { S.dialog = null; render(); },
+  toGifts() { const el = document.getElementById('regalos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
   addGift(d) { present({ s: 'gift', id: d.id, combo: !!d.combo, draft: { what: '', year: THIS_YEAR } }); },
   giftKind(d) { if (d.v === 'idea' && needUnlock('ideas')) return; const o = topOverlay(); o.s = d.v; o.draft = { what: o.draft.what, year: o.draft.year || THIS_YEAR }; render(); },
   addIdea(d) { if (needUnlock('ideas')) return; present({ s: 'idea', id: d.id, draft: { what: '' } }); },
@@ -869,7 +882,7 @@ const A = {
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },
   tzSet(d) { const o = topOverlay(); person(o.id).tz = d.v === 'null' ? null : d.v; persist(); render(); },
-  saveSuggestion(d) { const p = person(d.id); p.ideas.push({ what: d.what, src: 'Desde sugerencias' }); persist(); toast('Idea guardada', '💡'); },
+  saveSuggestion(d) { const p = person(d.id); p.ideas.push({ what: d.what, src: 'Desde sugerencias' }); persist(); toast('Idea guardada', '💡'); render(); },
   remToggle(d) { S.rem[d.k] = !S.rem[d.k]; persist(); render(); },
   remBefore(d) { S.rem.before = +d.v; persist(); render(); },
   remRound(d) { S.rem.roundBefore = +d.v; persist(); render(); },

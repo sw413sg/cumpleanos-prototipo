@@ -416,6 +416,32 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .gk-idea > span { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; background: var(--fill); flex: none; }
 .gk-row .w-sub, .gk-idea .w-sub { font-size: 13px; color: var(--label2); letter-spacing: -.08px; margin-top: 1px; }
 
+/* Sección Regalos de la ficha: gustos, ideas y lo ya regalado en una tarjeta */
+#regalos { scroll-margin-top: 100px; }
+.gb { background: var(--cell); border-radius: 22px; overflow: hidden; }
+.gb-block { display: block; width: 100%; text-align: left; padding: 14px 16px; }
+.gb-block + .gb-block { border-top: .5px solid var(--sep); }
+.gb-head { display: flex; align-items: center; gap: 12px; }
+.gb-head .grow, .gb-row .grow { flex: 1; min-width: 0; }
+.gb-head .t { font-size: 17px; font-weight: 600; }
+.gb-head .s, .gb-row .s { font-size: 13px; color: var(--label2); letter-spacing: -.08px; margin-top: 1px; }
+.gb-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+.gb-ic svg { width: 17px; height: 17px; }
+.gb-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 2px 44px; }
+.gb-chips span { padding: 6px 12px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-size: 15px; font-weight: 500; letter-spacing: -.24px; }
+.gb-add { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px 6px 9px; border-radius: 16px; font-size: 15px; font-weight: 600; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); letter-spacing: -.24px; }
+.gb-add svg { width: 14px; height: 14px; }
+.gb-row { display: flex; align-items: center; gap: 10px; margin-left: 44px; padding: 10px 0; border-bottom: .5px solid var(--sep); font-size: 16px; letter-spacing: -.3px; }
+.gb-row.sug .grow { color: var(--label); }
+.gb-spark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--orange); background: color-mix(in srgb, var(--orange) 15%, transparent); }
+.gb-spark svg { width: 14px; height: 14px; }
+.gb-save { flex: none; font-size: 15px; font-weight: 600; color: var(--accent); padding: 4px 0 4px 8px; }
+.gb-year { flex: none; font-size: 15px; color: var(--label2); font-variant-numeric: tabular-nums; }
+.gb-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 0 44px; }
+.gb-link { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; color: var(--accent); }
+.gb-link .chev { width: 7px; height: 12px; color: var(--accent); }
+.gb-locked .lock-badge { align-self: center; }
+
 /* Onboarding */
 .ob { flex: 1; display: flex; flex-direction: column; padding: calc(var(--safe-top) + 20px) 28px calc(var(--safe-bottom) + 16px); }
 .ob .art { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 96px; }

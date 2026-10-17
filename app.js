@@ -79,11 +79,14 @@ const P = {
   lockscreen: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 7h4"/><rect x="9" y="11" width="6" height="5" rx="1"/>',
   hourglass: '<path d="M6.5 3.5h11M6.5 20.5h11M7.5 3.5c0 5 4.5 5.5 4.5 8.5s-4.5 3.5-4.5 8.5M16.5 3.5c0 5-4.5 5.5-4.5 8.5s4.5 3.5 4.5 8.5"/>',
   listBullet: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="17.5" r=".6"/>',
+  noAds: '<path d="M4 10v4h3l7 4V6l-7 4z"/><path d="M17.5 9.5a3.5 3.5 0 010 5"/><path d="M3.5 3.5l17 17"/>',
   person: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/>',
 };
 const ic = (n, cls = '', sw = 1.8) => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 const chev = () => `<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L6.5 7l-5 5.5"/></svg>`;
 const backChev = () => `<svg viewBox="0 0 13 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2.5 10.5 11 19"/></svg>`;
+const NO_ADS = { t: 'Sin publicidad', s: 'Ni en la versión gratis. Los anuncios molestan, acá no hay.' };
+const noAdsRow = () => `<div class="row has-icon"><span class="icon-sq" style="background:#34c759">${ic('noAds', '', 2)}</span><span class="grow">${NO_ADS.t}<div class="sub">${NO_ADS.s}</div></span></div>`;
 const lockBadge = (txt = 'USD 5') => `<span class="lock-badge">${ic('lock', '', 2.4)}${txt}</span>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -370,7 +373,7 @@ function screenGifts() {
     body += `<div class="section-footer" style="padding:0 32px 20px">El historial es gratis. Si vas a repetir un regalo, la app te avisa: “ya se lo regalaste”.</div>`;
   } else if (!S.unlocked) {
     body += `<div class="empty" style="padding-top:30px">${ic('bulb')}<h3>Ideas de regalo</h3><p>Guardá ideas desde Safari, Mercado Libre o cualquier app con el botón <b>Compartir</b>, y recibí sugerencias según los gustos de cada uno.</p></div>
-      <div style="padding:0 16px 24px"><button class="btn-primary" data-a="paywall" data-f="ideas">${ic('lock', '', 2.2)}Desbloquear por USD 5</button></div>`;
+      <div style="padding:0 16px 24px"><button class="btn-primary" data-a="paywall" data-f="ideas">${ic('lock', '', 2.2)}Desbloquear por USD 5</button><div class="section-footer" style="text-align:center;padding:8px 0 0">Pago único y sin publicidad, nunca.</div></div>`;
   } else {
     const withIdeas = S.people.filter(p => p.ideas.length);
     for (const p of withIdeas) body += section(p.ideas.map(i => `<button class="row" data-a="openFromGifts" data-id="${p.id}"><span class="grow">${esc(i.what)}<div class="sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join(''), { header: esc(p.name) });
@@ -416,8 +419,8 @@ function screenWidgets() {
 /* ---------------- Pantallas: Ajustes ---------------- */
 function screenSettings() {
   let h = '';
-  if (S.unlocked) h += section(`<div class="row has-icon"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a)">${ic('star', '', 2)}</span><span class="grow"><div class="title-semibold">Todo desbloqueado</div><div class="sub">Gracias por apoyar la app 💛</div></span><span class="unlocked-pill">✓</span></div>`);
-  else h += section(`<button class="row has-icon" data-a="paywall" data-f="settings" style="padding-top:14px;padding-bottom:14px"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a);width:40px;height:40px;border-radius:10px;font-size:22px">🎁</span><span class="grow"><div class="title-semibold">Desbloquear todo</div><div class="sub">USD 5 · pago único, sin suscripción</div></span>${chev()}</button>`);
+  if (S.unlocked) h += section(`<div class="row has-icon"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a)">${ic('star', '', 2)}</span><span class="grow"><div class="title-semibold">Todo desbloqueado</div><div class="sub">Gracias por apoyar la app 💛</div></span><span class="unlocked-pill">✓</span></div>` + noAdsRow());
+  else h += section(`<button class="row has-icon" data-a="paywall" data-f="settings" style="padding-top:14px;padding-bottom:14px"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a);width:40px;height:40px;border-radius:10px;font-size:22px">🎁</span><span class="grow"><div class="title-semibold">Desbloquear todo</div><div class="sub">USD 5 · pago único, sin suscripción</div></span>${chev()}</button>` + noAdsRow());
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Recordatorios', value: S.rem.on ? `${S.rem.time} · ${S.rem.before ? S.rem.before + 'd antes' : 'mismo día'}` : 'Apagados', a: 'go', extra: 'data-s="reminders"' }) +
     navRow({ icon: 'download', color: '#34c759', title: 'Importar desde Contactos', a: 'import' }), { header: 'Avisos y datos' });
   const ex = (icon, color, title, s) => S.unlocked ? navRow({ icon, color, title, a: 'go', extra: `data-s="${s}"` }) : `<button class="row has-icon" data-a="paywall" data-f="${s}"><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><span class="grow">${title}</span>${lockBadge()}</button>`;
@@ -552,10 +555,11 @@ const FEATURE_NAMES = { specials: 'Fechas especiales', ideas: 'Ideas de regalo',
 function sheetPaywall(o) {
   const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`).join('');
   const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 5</b>, para siempre. Sin suscripción.</p>
+    <div class="feat no-ads"><span class="icon-sq" style="background:#34c759">${ic('noAds', '', 2)}</span><div><div class="t">${NO_ADS.t}</div><div class="s">${NO_ADS.s}</div></div></div>
     <div class="pw-group-title">Widgets</div>${f(FEATURES.widgets)}<div class="pw-group-title">Extras</div>${f(FEATURES.extras)}
     <div class="pw-group-title">Siempre gratis</div><div class="s muted small" style="line-height:1.45;padding-bottom:10px">Cumpleaños y edades, importar desde Contactos, recordatorios con aviso anticipado, cumples redondos, historial de regalos, gustos y el widget básico.</div></div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss" aria-label="Cerrar" style="color:var(--label2)"><svg viewBox="0 0 24 24" style="width:30px;height:30px"><circle cx="12" cy="12" r="11" fill="var(--fill)"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` }) +
-    `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">Desbloquear por USD 5</button><div class="fine">Pago único · Se cobra a tu Apple ID · Vale en todos tus dispositivos</div>${o.soft ? '<button class="btn-plain" data-a="dismiss">Ahora no</button>' : ''}<div class="links"><button data-a="restore">Restaurar compra</button><button data-a="fake" data-msg="Abriría los Términos">Términos</button><button data-a="fake" data-msg="Abriría la Privacidad">Privacidad</button></div></div></div>`);
+    `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">Desbloquear por USD 5</button><div class="fine">Pago único · Sin publicidad · Se cobra a tu Apple ID · Vale en todos tus dispositivos</div>${o.soft ? '<button class="btn-plain" data-a="dismiss">Ahora no</button>' : ''}<div class="links"><button data-a="restore">Restaurar compra</button><button data-a="fake" data-msg="Abriría los Términos">Términos</button><button data-a="fake" data-msg="Abriría la Privacidad">Privacidad</button></div></div></div>`);
 }
 function sheetStore(o) {
   return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">🎂</div><div style="flex:1"><div style="font-weight:600">Desbloquear todo</div><div class="muted small">Unforgettables · Compra dentro de la app</div></div></div><div class="kv"><span>Precio</span><span>USD 5,00 · pago único</span></div><div class="kv"><span>Cuenta</span><span>tu Apple ID</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : 'Comprar'}</button><button class="btn-plain" data-a="dismiss">Cancelar</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(Simulación de App Store — no se cobra nada)</div></div>`, { medium: true, short: true, cellBg: true });

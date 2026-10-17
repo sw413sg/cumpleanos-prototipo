@@ -581,3 +581,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .cal-day .cal-emo svg { width: 15px; height: 15px; }
 .cal-day.sel .cal-emo { color: #fff; }
 .cal-day.has-sp .n { top: 9px; }
+
+/* Lupa para buscar la idea en Mercado Libre */
+.ml-btn { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #2d3277; background: #ffe600; }
+.ml-btn svg { width: 15px; height: 15px; }

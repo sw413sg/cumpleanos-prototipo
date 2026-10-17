@@ -153,6 +153,9 @@ function suggestionsFor(p) {
   for (let i = 0; per.some(l => l[i]); i++) per.forEach(l => { if (l[i] && !out.some(o => o[0] === l[i][0])) out.push(l[i]); });
   return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', 0]);
 }
+// Buscar la idea en Mercado Libre: abre el listado con ese texto (sin API)
+const mlUrl = what => 'https://listado.mercadolibre.com.ar/' + encodeURIComponent(gNorm(what).replace(/["“”:+]/g, '').trim().replace(/\s+/g, '-'));
+const mlBtn = what => `<a class="ml-btn" href="${mlUrl(what)}" target="_blank" rel="noopener" aria-label="Buscar en Mercado Libre">${ic('search', '', 2.4)}</a>`;
 const SUGGESTIONS_DEFAULT = ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'];
 
 /* ---------------- Estado ---------------- */
@@ -352,8 +355,8 @@ function giftBox(p) {
   if (S.unlocked) {
     const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w) && !p.gifts.some(g => similar(g.what, w))).slice(0, 2);
     h += `<div class="gb-block">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', 'Guardá lo que se te ocurra, o una de las sugeridas.')}
-      ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(i.what)}<div class="s">${esc(i.src || 'Idea guardada')}</div></span></div>`).join('')}
-      ${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span><button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
+      ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(i.what)}<div class="s">${esc(i.src || 'Idea guardada')}</div></span>${mlBtn(i.what)}</div>`).join('')}
+      ${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span>${mlBtn(w)}<button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
       <div class="gb-actions">${add('addIdea', 'Idea')}<button class="gb-link" data-a="suggest" data-id="${p.id}">Ver más sugerencias${chev()}</button></div></div>`;
   } else {
     h += `<button class="gb-block gb-locked" data-a="paywall" data-f="ideas">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', `Guardá ideas y recibí sugerencias según lo que le gusta a ${first}.`, lockBadge())}</button>`;
@@ -405,10 +408,10 @@ function screenSuggest(id) {
   const rows = list.map(([what, why]) => {
     const prev = p.gifts.find(g => similar(g.what, what));
     const savedIdea = p.ideas.some(x => x.what === what);
-    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
+    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span>${mlBtn(what)}<button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
   const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` +
-    section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Se arman en el teléfono, sin internet.' });
+    section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Con la lupa la buscás en Mercado Libre.' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(p.name.split(' ')[0]), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function similar(a, b) {

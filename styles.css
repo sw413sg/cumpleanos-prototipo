@@ -397,6 +397,9 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .gk-head .s { font-size: 13px; color: var(--label2); }
 .gk-head.gk-person { align-items: center; justify-content: flex-start; gap: 10px; }
 .gk-head.gk-person .t { font-size: 17px; font-weight: 600; }
+.gk-head.gk-person .grow { flex: 1; min-width: 0; }
+.gk-sub { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--label2); padding: 10px 2px 4px; border-top: .5px solid var(--sep); }
+.gk-sub + .gk-row { border-top: 0; }
 .gk-card .avatar { width: 36px; height: 36px; }
 .gk-card .avatar.glyph svg { width: 20px; height: 20px; }
 .gk-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 9px 2px; border-top: .5px solid var(--sep); }

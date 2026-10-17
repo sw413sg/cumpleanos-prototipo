@@ -435,7 +435,7 @@ function giftNext() {
     <div class="gk-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div></div>
     <div><div class="gk-label">Le gusta</div><div class="gk-chips">${p.gustos.length ? p.gustos.map(g => `<span>${esc(g)}</span>`).join('') : '<span class="none">Todavía no anotaste sus gustos</span>'}</div></div>
     ${past.length ? `<div><div class="gk-label">Ya le regalaste</div>${past.map(g => `<div class="gk-past"><span>${esc(g.what)}</span><span>${g.year}</span></div>`).join('')}</div>` : ''}</button>
-    <div class="wk-info"><div class="grow"><div class="t">Próximo regalo</div><div class="s">Sus gustos y lo que ya le regalaste, para no repetir.</div></div><button class="gk-btn" data-a="addGift" data-id="${p.id}" data-combo="1">${ic('plus', '', 2.4)}Regalo</button></div></div>`;
+    <div class="wk-info"><div class="grow"><div class="t">Próximo regalo</div><div class="s">Sus gustos y lo que ya le regalaste, para no repetir.</div></div><button class="gk-btn" data-a="openGifts" data-id="${p.id}">${ic('gift', '', 2.2)}Regalo</button></div></div>`;
 }
 const gkCard = (head, rows) => `<div class="gk-card">${head}${rows}</div>`;
 function screenGifts() {
@@ -693,13 +693,11 @@ function giftWarning(p, text) {
 function sheetGift(o) {
   const p = person(o.id), dr = o.draft, isIdea = o.s === 'idea';
   const years = []; for (let y = THIS_YEAR; y >= THIS_YEAR - 8; y--) years.push(y);
-  // Desde el botón Regalo del detalle: un solo lugar para regalo ya hecho o idea
-  let h = o.combo ? `<div class="segmented"><button class="${isIdea ? '' : 'sel'}" data-a="giftKind" data-v="gift">Ya se lo regalé</button><button class="${isIdea ? 'sel' : ''}" data-a="giftKind" data-v="idea">Idea${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>` : '';
-  h += section(`<div class="row"><input class="field" id="giftWhat" placeholder="${isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica'}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: isIdea ? 'Idea' : 'Qué le regalaste' });
+  let h = section(`<div class="row"><input class="field" id="giftWhat" placeholder="${isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica'}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: isIdea ? 'Idea' : 'Qué le regalaste' });
   if (!isIdea) h += section(`<label class="row"><span class="grow">Año</span><select id="giftYear" style="border:0;background:transparent;color:var(--label2);font-size:17px;text-align:right">${years.map(y => `<option ${y === dr.year ? 'selected' : ''}>${y}</option>`).join('')}</select>${chev()}</label>`);
   else h += section(`<div class="row"><input class="field" placeholder="Link (opcional)" autocomplete="off"></div>`, { footer: 'Tip: desde Safari o Mercado Libre tocá Compartir → Unforgettables y se guarda solo.' });
   if (p.gifts.length) h += section(p.gifts.map(g => `<div class="row"><span class="grow">${esc(g.what)}</span><span class="value">${g.year}</span></div>`).join(''), { header: `Ya le regalaste a ${esc(p.name.split(' ')[0])}` });
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: o.combo ? 'Regalo' : isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
 }
 function gustoChips(o) {
   const p = person(o.id), q = gNorm(o.text.trim());
@@ -881,8 +879,9 @@ const A = {
   doDelete() { const o = topOverlay(); S.people = S.people.filter(p => p.id !== o.id); S.dialog = null; S.overlays.pop(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Persona eliminada', '🗑️'); },
   dialogCancel() { S.dialog = null; render(); },
   toGifts() { const el = document.getElementById('regalos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
-  addGift(d) { present({ s: 'gift', id: d.id, combo: !!d.combo, draft: { what: '', year: THIS_YEAR } }); },
-  giftKind(d) { if (d.v === 'idea' && needUnlock('ideas')) return; const o = topOverlay(); o.s = d.v; o.draft = { what: o.draft.what, year: o.draft.year || THIS_YEAR }; render(); },
+  // El botón Regalo de "Próximo regalo" lleva a la misma sección Regalos de la ficha
+  openGifts(d) { push({ s: 'detail', id: d.id }); setTimeout(A.toGifts, 350); },
+  addGift(d) { present({ s: 'gift', id: d.id, draft: { what: '', year: THIS_YEAR } }); },
   addIdea(d) { if (needUnlock('ideas')) return; present({ s: 'idea', id: d.id, draft: { what: '' } }); },
   giftSave() {
     const o = topOverlay(), p = person(o.id), what = o.draft.what.trim(); if (!what) return;

@@ -284,9 +284,9 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 /* Elegir color (SwiftUI: HStack de botones con Circle) */
 .wk-color { background: var(--cell); border-radius: 22px; padding: 14px 14px 12px; }
 .wk-colhead { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 600; padding: 0 2px 10px; }
-.wk-swatches { display: flex; justify-content: space-between; }
-.wk-swatches button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--label2); letter-spacing: 0; }
-.wk-swatches span { width: 44px; height: 44px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--sep); outline: 2.5px solid transparent; outline-offset: 2.5px; }
+.wk-swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 0; }
+.wk-swatches button { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; color: var(--label2); letter-spacing: 0; white-space: nowrap; }
+.wk-swatches span { width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--sep); outline: 2.5px solid transparent; outline-offset: 2.5px; }
 .wk-swatches .sel { color: var(--label); font-weight: 600; }
 .wk-swatches .sel span { outline-color: var(--accent); }
 .wk-how { background: var(--cell); border-radius: 22px; padding: 14px 16px 6px; }
@@ -341,14 +341,18 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .w-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 10px; background: rgba(226,61,74,.9); }
 .w-pill svg { width: 12px; height: 12px; }
 /* Colores (Unlock) */
-.widget.t-red, .widget.t-purple, .widget.t-night { color: #fff; --label2: rgba(255,255,255,.8); --sep: rgba(255,255,255,.3); --label: #fff; }
-.widget.t-red { background: linear-gradient(135deg, #ff5f6d, #e23d4a 55%, #b31b55); --accent: #fff; --purple: rgba(255,255,255,.3); }
-.widget.t-purple { background: linear-gradient(135deg, #c86dd7, #af52de 55%, #7b2fbf); --accent: rgba(255,255,255,.3); --purple: #fff; }
-.widget.t-purple .w-brand, .widget.t-purple .w-hoy { color: #fff; }
-.widget.t-purple .w-cal .sp { color: #7b2fbf; }
-.widget.t-red .w-cal .cu { color: #b31b55; }
-.widget.t-night { background: linear-gradient(160deg, #2a1a2e, #15151b); --accent: #ff8a93; --purple: #c77dff; }
-.widget.t-red .avatar.glyph, .widget.t-purple .avatar.glyph { background: rgba(255,255,255,.25) !important; }
+.widget.t-color { color: #fff; --label: #fff; --label2: rgba(255,255,255,.8); --sep: rgba(255,255,255,.3); --accent: #fff; --purple: rgba(255,255,255,.3); }
+.widget.t-color .avatar.glyph { background: rgba(255,255,255,.25) !important; }
+/* Suave: fondo apenas teñido y el color como acento (sirve también para los widgets fijados) */
+.widget.t-soft { color: var(--label); }
+.widget.w-pin.t-soft .w-name { color: var(--label); }
+.widget.w-pin.t-soft .w-sub, .widget.w-pin.t-soft .w-count .u, .widget.w-pin.t-soft .w-barlab, .widget.w-pin.t-soft .w-clock i { color: var(--label2); }
+.widget.w-pin.t-soft .w-count .big, .widget.w-pin.t-soft .w-clock .tick { color: var(--accent); }
+.widget.w-pin.t-soft .w-emoji { background: var(--accent); color: #fff; }
+.widget.w-pin.t-soft .w-clock > div { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.widget.w-pin.t-soft .w-bar { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.widget.w-pin.t-soft .w-bar span { background: var(--accent); }
+.widget.t-soft .hearts, .widget.t-soft .confetti { filter: brightness(0); opacity: .06; }
 
 /* Pantalla bloqueada (SwiftUI: .accessoryInline / .accessoryCircular / .accessoryRectangular) */
 .lk-wall { width: 100%; border-radius: 12px; padding: 18px 12px 20px; color: #fff; text-align: center; background: radial-gradient(circle at 80% 10%, rgba(255,140,160,.5), transparent 45%), linear-gradient(170deg, #6b1636, #a8174b 45%, #4b2a7b); }
@@ -568,3 +572,6 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .pin-styles .kp-ic { background: linear-gradient(160deg, #ffb340, #ff9500 60%, #e07b00); }
 .pin-styles b { display: block; font-size: 15px; }
 .pin-styles .s { display: block; font-size: 12px; color: var(--label2); line-height: 1.25; letter-spacing: 0; }
+
+.wk-tone { margin: 14px 0 2px; }
+.pin-color { margin: -12px 16px 28px; }

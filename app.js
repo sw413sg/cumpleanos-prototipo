@@ -244,7 +244,7 @@ function screenList() {
       if (!all.length && !workPeople.length) body += `<div class="empty">${ic('search')}<h3>Sin resultados</h3><p>No hay nadie que se llame “${esc(S.search)}”.</p></div>`;
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Cumpleaños</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
 }
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
@@ -320,7 +320,7 @@ function screenDetail(id) {
     h += section(`<button class="row has-icon" data-a="paywall" data-f="ideas"><span class="icon-sq" style="background:#ff9500">${ic('sparkles', '', 2)}</span><span class="grow">Sugerencias e ideas de regalo<div class="sub">Según sus gustos, y guardadas desde Compartir</div></span>${lockBadge()}</button>`, { header: 'Ideas de regalo' });
   }
   if (p.notes && (!p.work || S.unlocked)) h += section(`<div class="row"><span class="grow">${esc(p.notes)}</span></div>`, { header: p.work ? 'Notas · Trabajo' : 'Notas' });
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}" data-key="detail">${navbar({ left: backBtn('Cumpleaños'), right: `<button class="navbtn" data-a="edit" data-id="${p.id}">Editar</button>`, blur: true })}<div class="scroll" data-key="detail-${p.id}">${h}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}" data-key="detail">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="edit" data-id="${p.id}">Editar</button>`, blur: true })}<div class="scroll" data-key="detail-${p.id}">${h}</div></div>`;
 }
 const beforeLabel = n => n === 0 ? 'Solo el mismo día' : n === 1 ? '1 día antes' : n === 7 ? '1 semana antes' : n === 14 ? '2 semanas antes' : `${n} días antes`;
 
@@ -331,7 +331,7 @@ function screenSpecial(id) {
   h += `<div class="stats"><div class="stat"><div class="n">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 1 ? 'día' : 'días'}</div></div>${sp.y ? `<div class="stat"><div class="n">${nextDate(sp.m, sp.d).getFullYear() - sp.y}</div><div class="l">años</div></div>` : ''}</div>`;
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: `${beforeLabel(S.rem.before)} (general)`, a: 'fake', extra: 'data-msg="Mismo selector que en cada persona"' }), { header: 'Recordatorio' });
   h += section(`<button class="row destructive" data-a="fake" data-msg="Se eliminaría la fecha">Eliminar fecha</button>`);
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(S.tab === 'dates' ? 'Fechas' : 'Cumpleaños'), blur: true })}<div class="scroll">${h}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(S.tab === 'dates' ? 'Fechas' : 'Unforgettables'), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 
 function screenSuggest(id) {
@@ -368,7 +368,7 @@ function screenGifts() {
     const withIdeas = S.people.filter(p => p.ideas.length);
     for (const p of withIdeas) body += section(p.ideas.map(i => `<button class="row" data-a="openFromGifts" data-id="${p.id}"><span class="grow">${esc(i.what)}<div class="sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join(''), { header: esc(p.name) });
     if (!withIdeas.length) body += `<div class="empty" style="padding-top:30px">${ic('bulb')}<h3>Sin ideas guardadas</h3><p>Probá guardando una desde el menú Compartir.</p></div>`;
-    body += section(`<button class="row accent center" data-a="shareDemo">${ic('share', 'check', 2)}Probar: guardar desde Compartir</button>`, { footer: 'Simula lo que pasa cuando estás mirando un producto en Safari o Mercado Libre y tocás Compartir → Cumpleaños.' });
+    body += section(`<button class="row accent center" data-a="shareDemo">${ic('share', 'check', 2)}Probar: guardar desde Compartir</button>`, { footer: 'Simula lo que pasa cuando estás mirando un producto en Safari o Mercado Libre y tocás Compartir → Unforgettables.' });
   }
   return `<div class="screen" data-key="gifts">${navbar({})}<div class="scroll" data-key="gifts-scroll"><div class="large-title">Regalos</div>${body}</div></div>`;
 }
@@ -514,7 +514,7 @@ function sheetGift(o) {
   const years = []; for (let y = THIS_YEAR; y >= THIS_YEAR - 8; y--) years.push(y);
   let h = section(`<div class="row"><input class="field" id="giftWhat" placeholder="${isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica'}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: isIdea ? 'Idea' : 'Qué le regalaste' });
   if (!isIdea) h += section(`<label class="row"><span class="grow">Año</span><select id="giftYear" style="border:0;background:transparent;color:var(--label2);font-size:17px;text-align:right">${years.map(y => `<option ${y === dr.year ? 'selected' : ''}>${y}</option>`).join('')}</select>${chev()}</label>`);
-  else h += section(`<div class="row"><input class="field" placeholder="Link (opcional)" autocomplete="off"></div>`, { footer: 'Tip: desde Safari o Mercado Libre tocá Compartir → Cumpleaños y se guarda solo.' });
+  else h += section(`<div class="row"><input class="field" placeholder="Link (opcional)" autocomplete="off"></div>`, { footer: 'Tip: desde Safari o Mercado Libre tocá Compartir → Unforgettables y se guarda solo.' });
   if (p.gifts.length) h += section(p.gifts.map(g => `<div class="row"><span class="grow">${esc(g.what)}</span><span class="value">${g.year}</span></div>`).join(''), { header: `Ya le regalaste a ${esc(p.name.split(' ')[0])}` });
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
 }
@@ -558,10 +558,10 @@ function sheetStore(o) {
   return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">🎂</div><div style="flex:1"><div style="font-weight:600">Desbloquear todo</div><div class="muted small">Unforgettables · Compra dentro de la app</div></div></div><div class="kv"><span>Precio</span><span>USD 5,00 · pago único</span></div><div class="kv"><span>Cuenta</span><span>tu Apple ID</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : 'Comprar'}</button><button class="btn-plain" data-a="dismiss">Cancelar</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(Simulación de App Store — no se cobra nada)</div></div>`, { medium: true, short: true, cellBg: true });
 }
 function sheetShare(o) {
-  const apps = [['💬', 'Mensajes', '#34c759'], ['🟢', 'WhatsApp', '#25d366'], ['✉️', 'Mail', '#1e90ff'], ['🎂', 'Cumpleaños', 'linear-gradient(135deg,#ff7a85,#e23d4a)'], ['📝', 'Notas', '#ffcc00']];
+  const apps = [['💬', 'Mensajes', '#34c759'], ['🟢', 'WhatsApp', '#25d366'], ['✉️', 'Mail', '#1e90ff'], ['🎂', 'Unforgettables', 'linear-gradient(135deg,#ff7a85,#e23d4a)'], ['📝', 'Notas', '#ffcc00']];
   return sheetWrap(o, `<div style="padding:12px 16px 0"><div class="share-mock" style="margin:0;display:flex;gap:12px;align-items:center"><div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#ffe600,#ffcd00);display:grid;place-items:center;font-size:28px">🎧</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">Auriculares JBL Tune 520BT</div><div class="muted small">articulo.mercadolibre.com.ar</div></div></div>
-    <div class="share-apps">${apps.map(([e, n, bg]) => `<button class="share-app" data-a="${n === 'Cumpleaños' ? 'shareToApp' : 'fake'}" data-msg="Solo de ejemplo"><div class="ic" style="background:${bg}">${e}</div>${n}</button>`).join('')}</div>
-    <div class="small muted" style="text-align:center;padding:8px 0 calc(var(--safe-bottom) + 16px)">Este es el menú Compartir de iOS. Tocá <b>Cumpleaños</b>.</div></div>`, { medium: true, short: true });
+    <div class="share-apps">${apps.map(([e, n, bg]) => `<button class="share-app" data-a="${n === 'Unforgettables' ? 'shareToApp' : 'fake'}" data-msg="Solo de ejemplo"><div class="ic" style="background:${bg}">${e}</div>${n}</button>`).join('')}</div>
+    <div class="small muted" style="text-align:center;padding:8px 0 calc(var(--safe-bottom) + 16px)">Este es el menú Compartir de iOS. Tocá <b>Unforgettables</b>.</div></div>`, { medium: true, short: true });
 }
 function sheetPick(o) {
   const rows = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).map(p => `<button class="row person" data-a="pickPerson" data-id="${p.id}">${avatar(p)}<span class="grow"><div>${esc(p.name)}</div><div class="sub">${esc(subtitle(p))}</div></span></button>`).join('');
@@ -594,7 +594,7 @@ function dialogHtml(d) {
 /* ---------------- Render ---------------- */
 const phone = document.getElementById('phone');
 const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), gifts: screenGifts, widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, specials: screenSpecials, share: screenShare, work: screenWork };
-const TABS = [['list', 'Cumpleaños', 'cake'], ['dates', 'Fechas', 'heart'], ['gifts', 'Regalos', 'gift'], ['widgets', 'Widgets', 'widgets'], ['settings', 'Ajustes', 'gear']];
+const TABS = [['list', 'Unforgettables', 'cake'], ['dates', 'Fechas', 'heart'], ['gifts', 'Regalos', 'gift'], ['widgets', 'Widgets', 'widgets'], ['settings', 'Ajustes', 'gear']];
 const statusbar = `<div class="statusbar"><span>9:41</span><span class="icons"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.1-1.2A10 10 0 008 .8 10 10 0 00.9 3.7L2 4.9a8.4 8.4 0 016-2.4zm0 3.4c1.4 0 2.6.5 3.6 1.4l1.1-1.2A7 7 0 008 4.2a7 7 0 00-4.7 1.9l1.1 1.2c1-.9 2.2-1.4 3.6-1.4zm0 3.3c.6 0 1.1.2 1.5.6L8 11.4 6.5 9.8c.4-.4.9-.6 1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2.5" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div>`;
 
 function applyTheme() { if (S.theme === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = S.theme; }

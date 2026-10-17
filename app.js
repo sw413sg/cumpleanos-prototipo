@@ -263,9 +263,8 @@ function calendarBody() {
   let cells = '<span></span>'.repeat(lead);
   for (let d = 1; d <= days; d++) {
     const items = byDay[d] || [], wknd = (lead + d - 1) % 7 >= 5;
-    const marks = items.slice(0, 3).map(it => it.p ? `<i style="background:linear-gradient(160deg,${gradFor(it.p.id).join(',')})"></i>` : `<i class="sp"></i>`).join('');
-    const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.length ? 'has' : ''].join(' ');
-    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}"><span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}<span class="marks">${marks}</span></button>`;
+    const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.some(it => it.p) ? 'has' : items.length ? 'has-sp' : ''].join(' ');
+    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}"><span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}</button>`;
   }
   const total = Object.values(byDay).flat().filter(it => it.p).length;
   let h = `<div class="cal"><div class="cal-head"><button class="cal-arrow" data-a="calMove" data-v="-1" aria-label="Mes anterior">${ic('back', '', 2.4)}</button><div class="cal-title"><div class="m">${cap(MONTHS[m - 1])}</div><div class="y">${y}</div></div><button class="cal-arrow" data-a="calMove" data-v="1" aria-label="Mes siguiente">${ic('back', 'flip', 2.4)}</button></div>`;

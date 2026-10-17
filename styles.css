@@ -359,16 +359,16 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal-wd { text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--label2); letter-spacing: .2px; padding-bottom: 4px; }
 .cal-wd.wknd { color: var(--label3); }
-.cal-day { position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; background: var(--fill); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-variant-numeric: tabular-nums; }
-.cal-day .n { font-size: 17px; font-weight: 600; line-height: 1; }
+.cal-day { position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; background: var(--fill); display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.cal-day .n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 600; line-height: 1; }
 .cal-day.wknd .n { color: var(--label2); }
-.cal-day .hoy { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: .3px; line-height: 1; }
-.cal-day .marks { display: flex; gap: 2px; height: 7px; align-items: center; }
-.cal-day .marks i { width: 7px; height: 7px; border-radius: 50%; }
-.cal-day .marks i.sp { background: var(--purple); }
+/* Día con cumple: círculo detrás del número (fechas especiales en violeta) */
+.cal-day.has .n { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent); }
+.cal-day.has-sp .n { box-shadow: inset 0 0 0 1.5px var(--purple); color: var(--purple); }
+.cal-day .hoy { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: .3px; line-height: 1; }
 .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .cal-day.sel { background: var(--accent); }
 .cal-day.sel .n, .cal-day.sel .hoy, .cal-day.sel.wknd .n { color: #fff; }
-.cal-day.sel .marks i { box-shadow: 0 0 0 1.5px #fff; }
+.cal-day.sel.has .n, .cal-day.sel.has-sp .n { background: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1.5px #fff; }
 .cal-foot { text-align: center; font-size: 13px; color: var(--label2); padding: 10px 0 2px; }
 .cal-foot button { color: var(--accent); font-size: 13px; }

@@ -189,11 +189,10 @@ function countdown(n) {
   return `<div class="countdown"><div class="n">${n}</div><div class="u">${n === 1 ? 'día' : 'días'}</div></div>`;
 }
 // Ícono de la fila en la lista: círculo con torta (cumpleaños) o corazón (fecha especial)
-const CAKE_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2c.9.9.9 1.9 0 2.6-.9-.7-.9-1.7 0-2.6z" fill="currentColor" stroke="none"/><path d="M12 7.5v2.5"/><path d="M5 20v-7.5A2.5 2.5 0 017.5 10h9a2.5 2.5 0 012.5 2.5V20"/><path d="M5 14.5c1.2 1 2.3 1 3.5 0s2.3-1 3.5 0 2.3 1 3.5 0 2.3-1 3.5 0"/><path d="M3.5 20h17"/></svg>';
 const HEART_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.5s-7.8-4.7-7.8-10.6A4.4 4.4 0 0112 7.2a4.4 4.4 0 017.8 2.7c0 5.9-7.8 10.6-7.8 10.6z"/></svg>';
 function cakeIcon(p) {
   const [a, b] = gradFor(p.id);
-  return `<div class="avatar glyph" style="background:linear-gradient(160deg,${a},${b})">${CAKE_GLYPH}</div>`;
+  return `<div class="avatar glyph" style="background:linear-gradient(160deg,${a},${b})">${ic('cake', '', 2)}</div>`;
 }
 const heartIcon = () => `<div class="avatar glyph" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0)">${HEART_GLYPH}</div>`;
 function personRow(p) {

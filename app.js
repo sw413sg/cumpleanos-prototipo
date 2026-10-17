@@ -85,7 +85,7 @@ const P = {
 const ic = (n, cls = '', sw = 1.8) => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 const chev = () => `<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L6.5 7l-5 5.5"/></svg>`;
 const backChev = () => `<svg viewBox="0 0 13 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2.5 10.5 11 19"/></svg>`;
-const NO_ADS = { t: 'Sin publicidad', s: 'Ni en la versión gratis. Los anuncios molestan, acá no hay.' };
+const NO_ADS = { t: 'Sin publicidad', s: 'Hacemos un esfuerzo extra en mantener la app libre de ads' };
 const noAdsRow = () => `<div class="row has-icon"><span class="icon-sq" style="background:#34c759">${ic('noAds', '', 2)}</span><span class="grow">${NO_ADS.t}<div class="sub">${NO_ADS.s}</div></span></div>`;
 const lockBadge = (txt = 'USD 5') => `<span class="lock-badge">${ic('lock', '', 2.4)}${txt}</span>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

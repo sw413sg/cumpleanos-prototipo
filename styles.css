@@ -381,4 +381,3 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 
 /* Círculo de la fila en la lista con torta o corazón (SwiftUI: Circle + Image) */
 .avatar.glyph svg { width: 24px; height: 24px; color: #fff; }
-.paywall .feat.no-ads { background: var(--cell); border-radius: 12px; padding: 10px 12px; margin: -8px 0 6px; }

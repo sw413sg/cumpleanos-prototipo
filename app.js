@@ -144,15 +144,12 @@ function gustoMatch(g) {
   const names = ([w, syn]) => [gNorm(w), ...gNorm(syn).split('|')];
   return GUSTO_LIST.find(e => names(e).includes(n)) || GUSTO_LIST.find(e => names(e).some(x => words.includes(x) || x.split(/\s+/).includes(n)));
 }
-// Presupuesto de las sugerencias, en miles de pesos
-const BUDGETS = [['all', 'Todos', 0, 1e9], ['low', 'Hasta 20 mil', 0, 20], ['mid', '20 a 50 mil', 21, 50], ['high', 'Más de 50 mil', 51, 1e9]];
 // Sugerencias: las ideas de cada gusto, intercaladas (y arrancando en precios distintos) para que no salgan todas iguales. [idea, gusto, precio]
-function suggestionsFor(p, budget = 'all') {
-  const [, , lo, hi] = BUDGETS.find(b => b[0] === budget);
-  const per = p.gustos.map((g, i) => { const m = gustoMatch(g); if (!m) return []; const l = m[2].filter(([, k]) => k >= lo && k <= hi).map(([what, k]) => [what, g, k]); const r = (i * 2) % (l.length || 1); return [...l.slice(r), ...l.slice(0, r)]; });
+function suggestionsFor(p) {
+  const per = p.gustos.map((g, i) => { const m = gustoMatch(g); if (!m) return []; const l = m[2].map(([what, k]) => [what, g, k]); const r = (i * 2) % (l.length || 1); return [...l.slice(r), ...l.slice(0, r)]; });
   const out = [];
   for (let i = 0; per.some(l => l[i]); i++) per.forEach(l => { if (l[i] && !out.some(o => o[0] === l[i][0])) out.push(l[i]); });
-  return out.length || per.some(l => l.length) || budget !== 'all' ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', 0]);
+  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', 0]);
 }
 const SUGGESTIONS_DEFAULT = ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'];
 
@@ -170,7 +167,7 @@ const S = {
   tab: 'list',
   stacks: { list: [{ s: 'list' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
-  search: '', listMode: 'all', giftsMode: 'history', budget: 'all', widgetsMode: 'home',
+  search: '', listMode: 'all', giftsMode: 'history', widgetsMode: 'home',
   listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
@@ -392,7 +389,7 @@ function screenSpecial(id) {
 
 function screenSuggest(id) {
   const p = person(id);
-  const list = suggestionsFor(p, S.budget);
+  const list = suggestionsFor(p);
   const given = p.gifts.map(g => g.what.toLowerCase());
   const rows = list.map(([what, why]) => {
     const prev = p.gifts.find(g => similar(g.what, what));
@@ -400,8 +397,7 @@ function screenSuggest(id) {
     return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
   const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` +
-    `<div class="chips" style="padding:0 16px 14px">${BUDGETS.map(([k, t]) => `<button class="chip ${S.budget === k ? 'sel' : ''}" data-a="budget" data-v="${k}">${t}</button>`).join('')}</div>` +
-    (rows ? '' : `<div class="empty" style="padding-top:20px">${ic('sparkles')}<h3>Nada en este presupuesto</h3><p>Probá con otro rango o sumale gustos.</p></div>`) + section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Se arman en el teléfono, sin internet.' });
+    section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Se arman en el teléfono, sin internet.' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(p.name.split(' ')[0]), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function similar(a, b) {
@@ -751,7 +747,7 @@ function sheetShare(o) {
 }
 function sheetPick(o) {
   const rows = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).map(p => `<button class="row person" data-a="pickPerson" data-id="${p.id}">${avatar(p)}<span class="grow"><div>${esc(p.name)}</div><div class="sub">${esc(subtitle(p))}</div></span></button>`).join('');
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Guardar idea para…' }) + `<div class="scroll">${section(`<div class="row"><span class="grow"><b>Auriculares JBL Tune 520BT</b><div class="sub">Mercado Libre · ARS 69.999</div></span></div>`, { header: 'Idea' })}${section(rows, { header: '¿Para quién?' })}</div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Guardar idea para…' }) + `<div class="scroll">${section(`<div class="row"><span class="grow"><b>Auriculares JBL Tune 520BT</b><div class="sub">Mercado Libre</div></span></div>`, { header: 'Idea' })}${section(rows, { header: '¿Para quién?' })}</div>`);
 }
 
 function coverOnboarding(o) {
@@ -830,7 +826,6 @@ const A = {
   calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = null; render(); },
   addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
   giftsMode(d) { S.giftsMode = d.v; render(); },
-  budget(d) { S.budget = d.v; render(); },
   widgetsMode(d) { S.widgetsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },
   fake(d) { toast(d.msg || 'Solo de ejemplo', 'ℹ️'); },

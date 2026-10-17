@@ -218,12 +218,21 @@ function countdown(n) {
   return `<div class="countdown"><div class="n">${a}</div><div class="u">${u}</div></div>`;
 }
 // Ícono de la fila en la lista: círculo con torta (cumpleaños) o corazón (fecha especial)
-const HEART_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.5s-7.8-4.7-7.8-10.6A4.4 4.4 0 0112 7.2a4.4 4.4 0 017.8 2.7c0 5.9-7.8 10.6-7.8 10.6z"/></svg>';
 function cakeIcon(p) {
   const [a, b] = gradFor(p.id);
   return `<div class="avatar glyph" style="background:linear-gradient(160deg,${a},${b})">${ic('cake', '', 2)}</div>`;
 }
-const heartIcon = () => `<div class="avatar glyph" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0)">${HEART_GLYPH}</div>`;
+// Ícono de cada fecha según qué día es (Día del Amigo 🫂, Día de la Madre ❤️…); si no se reconoce, el del tipo
+const SP_EMOJI = [[/madre/i, '❤️'], [/padre/i, '👔'], [/amig/i, '🫂'], [/infancia|niñ/i, '🧸'], [/gradua|recib/i, '🎓'], [/casamiento|boda/i, '💍'], [/aniversario|novi/i, '💞']];
+const KIND_EMOJI = { Aniversario: '💞', Casamiento: '💍', 'Fecha del año': '📅', Otra: '⭐️' };
+const spEmoji = sp => (SP_EMOJI.find(([re]) => re.test(sp.name)) || [])[1] || sp.emoji || KIND_EMOJI[sp.kind] || '💜';
+const spIcon = sp => `<div class="avatar glyph emoji" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0)">${spEmoji(sp)}</div>`;
+// Fondo del banner y del widget: el mismo ícono repetido
+function spPattern(sp) {
+  const e = spEmoji(sp), pts = [[12, 16, -15], [58, 10, 10], [102, 20, 20], [34, 50, 0], [82, 56, -20], [12, 84, 15], [60, 88, -10], [108, 80, 5]];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="96">${pts.map(([x, y, r]) => `<text x="${x}" y="${y}" font-size="13" text-anchor="middle" dominant-baseline="central" transform="rotate(${r} ${x} ${y})">${e}</text>`).join('')}</svg>`;
+  return `<div class="hearts" style="background-image:url('data:image/svg+xml,${encodeURIComponent(svg)}')"></div>`;
+}
 function personRow(p) {
   const n = daysLeft(p.m, p.d), age = turningAge(p);
   const badges = (isRound(age) && S.rem.round ? `<span class="badge round">🎉 ${age}</span> ` : '') + (p.work && S.unlocked ? `<span class="badge work">Trabajo</span>` : '');
@@ -232,7 +241,7 @@ function personRow(p) {
 function specialRow(sp) {
   const n = daysLeft(sp.m, sp.d);
   const yrs = sp.y ? nextDate(sp.m, sp.d).getFullYear() - sp.y : null;
-  return `<button class="row person" data-a="openSpecial" data-id="${sp.id}">${heartIcon()}<span class="grow"><div class="title-semibold">${esc(sp.name)} <span class="badge special">${esc(sp.kind)}</span></div><div class="sub">${monthDay(sp.m, sp.d)}${yrs ? ` · ${yrs} años` : ''}</div></span>${countdown(n)}</button>`;
+  return `<button class="row person" data-a="openSpecial" data-id="${sp.id}">${spIcon(sp)}<span class="grow"><div class="title-semibold">${esc(sp.name)} <span class="badge special">${esc(sp.kind)}</span></div><div class="sub">${monthDay(sp.m, sp.d)}${yrs ? ` · ${yrs} años` : ''}</div></span>${countdown(n)}</button>`;
 }
 
 /* ---------------- Pantallas: Cumpleaños ---------------- */
@@ -269,7 +278,7 @@ function screenList() {
       const spToday = S.listMode === 'birthdays' || q ? [] : specials.filter(sp => daysLeft(sp.m, sp.d) === 0);
       if (spToday.length) {
         const sp = spToday[0], yrs = sp.y ? TODAY.getFullYear() - sp.y : null;
-        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}"><div class="hearts"></div><div class="avatar">${sp.emoji || '💜'}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
+        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}">${spPattern(sp)}<div class="avatar">${spEmoji(sp)}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
       }
       if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
       if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
@@ -287,7 +296,6 @@ function screenList() {
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 // Forma detrás del número: torta = cumpleaños, corazón = fecha especial (SwiftUI: Shape propia)
 const CAL_CAKE = '<svg class="shape" viewBox="0 0 40 40" aria-hidden="true"><path class="flame" d="M20 1.5c1.6 1.7 1.6 3.3 0 4.5-1.6-1.2-1.6-2.8 0-4.5z"/><path d="M20 6.5v3.5"/><path d="M8 10h24a3.5 3.5 0 013.5 3.5V31H4.5V13.5A3.5 3.5 0 018 10z"/><path d="M4.5 13.5q2.6 3 5.2 0t5.2 0 5.2 0 5.2 0 5.2 0 5.2 0"/><path d="M2.5 31h35"/></svg>';
-const CAL_HEART = '<svg class="shape" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 35C9 28 3 22 3 14.5 3 9.8 6.6 6.5 11 6.5c3.8 0 6.6 2.3 9 5.5 2.4-3.2 5.2-5.5 9-5.5 4.4 0 8 3.3 8 8 0 7.5-6 13.5-17 20.5z"/></svg>';
 const DAYNAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 function calendarItems(y, m) {
   // Qué se festeja cada día de ese mes (el 29/2 cae el 28 en años no bisiestos)
@@ -308,7 +316,7 @@ function calendarBody() {
   for (let d = 1; d <= days; d++) {
     const items = byDay[d] || [], wknd = (lead + d - 1) % 7 >= 5;
     const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.some(it => it.p) ? 'has' : items.length ? 'has-sp' : ''].join(' ');
-    const shape = items.some(it => it.p) ? CAL_CAKE : items.length ? CAL_HEART : '';
+    const shape = items.some(it => it.p) ? CAL_CAKE : items.length ? `<span class="cal-emo">${spEmoji(items[0].sp)}</span>` : '';
     cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}">${shape}<span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}</button>`;
   }
   const total = Object.values(byDay).flat().filter(it => it.p).length;
@@ -379,7 +387,7 @@ const beforeLabel = n => n === 0 ? 'Solo el mismo día' : n === 1 ? '1 día ante
 function screenSpecial(id) {
   const sp = S.specials.find(s => s.id === id);
   const n = daysLeft(sp.m, sp.d);
-  let h = `<div class="detail-head"><div class="avatar lg" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0);font-size:44px">${sp.emoji}</div><h2>${esc(sp.name)}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(sp.kind)}</div></div>`;
+  let h = `<div class="detail-head"><div class="avatar lg" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0);font-size:44px">${spEmoji(sp)}</div><h2>${esc(sp.name)}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(sp.kind)}</div></div>`;
   h += `<div class="stats"><div class="stat"><div class="n">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 1 ? 'día' : 'días'}</div></div>${sp.y ? `<div class="stat"><div class="n">${nextDate(sp.m, sp.d).getFullYear() - sp.y}</div><div class="l">años</div></div>` : ''}</div>`;
   h += section(navRow({ icon: 'calendar', color: '#af52de', title: 'Cuándo es', value: monthDay(sp.m, sp.d), a: 'editSpecial', extra: `data-id="${sp.id}"` }), { header: 'Fecha' });
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: `${beforeLabel(S.rem.before)} (general)`, a: 'fake', extra: 'data-msg="Mismo selector que en cada persona"' }), { header: 'Recordatorio' });
@@ -463,7 +471,7 @@ function upcoming(k, withSpecials = true) {
   if (withSpecials) all.push(...S.specials.map(sp => ({ sp, n: daysLeft(sp.m, sp.d) })));
   return all.sort((a, b) => a.n - b.n).slice(0, k);
 }
-const wCircle = it => it.p ? cakeIcon(it.p) : heartIcon();
+const wCircle = it => it.p ? cakeIcon(it.p) : spIcon(it.sp);
 const wName = it => esc(it.p ? it.p.name : it.sp.name);
 const wWhen = n => { if (n === 0) return `<span class="w-hoy">Hoy</span>`; if (n === 1) return 'Mañana'; const [a, u] = countParts(n); return `<b>${a}</b> ${u}`; };
 const wBrand = () => `<div class="w-brand">${titleHeart}</div>`;
@@ -504,7 +512,7 @@ function widgetPhoto() {
 function widgetSpecial() {
   const sp = [...S.specials].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).find(s => s.kind !== 'Fecha del año') || S.specials[0]; if (!sp) return '';
   const n = daysLeft(sp.m, sp.d), [a, u] = countParts(n);
-  return `<div class="widget sm w-special"><div class="hearts"></div><div class="w-emoji">${sp.emoji || '💜'}</div>
+  return `<div class="widget sm w-special">${spPattern(sp)}<div class="w-emoji">${spEmoji(sp)}</div>
     <div class="w-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
     <div><div class="w-name clamp">${esc(sp.name)}</div><div class="w-sub">${esc(sp.kind)}</div></div></div>`;
 }
@@ -582,7 +590,7 @@ function screenAppearance() {
 }
 function screenSpecials() {
   const rows = [...S.specials].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).map(specialRow).join('');
-  const sugg = [['💍', 'Casamiento'], ['💞', 'Aniversario'], ['💐', 'Día de la Madre'], ['👔', 'Día del Padre'], ['🧸', 'Día de las Infancias'], ['🎓', 'Graduación']];
+  const sugg = [['💍', 'Casamiento'], ['💞', 'Aniversario'], ['❤️', 'Día de la Madre'], ['🫂', 'Día del Amigo'], ['👔', 'Día del Padre'], ['🧸', 'Día de las Infancias'], ['🎓', 'Graduación']];
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Fechas especiales', right: `<button class="navbtn" data-a="addSpecial">${ic('plus', '', 2.2)}</button>`, blur: true })}<div class="scroll" style="padding-top:20px">${section(rows, { footer: 'Aparecen en la lista junto a los cumpleaños, con su propio aviso.' })}${section(`<div class="chips">${sugg.map(([e, n]) => `<button class="chip" data-a="addSpecialQuick" data-e="${e}" data-n="${n}">${e} ${n}</button>`).join('')}</div>`, { header: 'Sumar rápido' })}</div></div>`;
 }
 function screenShare() {

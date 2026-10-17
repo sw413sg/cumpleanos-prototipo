@@ -487,7 +487,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .cal-day { position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; background: var(--fill); display: grid; place-items: center; font-variant-numeric: tabular-nums; }
 .cal-day .n { font-size: 17px; font-weight: 600; line-height: 1; }
 .cal-day.wknd .n { color: var(--label2); }
-/* Día con cumple: torta detrás del número; fecha especial: corazón */
+/* Día con cumple: torta detrás del número; fecha especial: el ícono del día arriba */
 .cal-day .shape { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; opacity: .5; }
 .cal-day .shape .flame { fill: var(--orange); stroke: none; }
 .cal-day.has-sp .shape { fill: rgba(175,82,222,.15); stroke: var(--purple); }
@@ -549,3 +549,8 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wk-stage { --wall: linear-gradient(160deg, #3a1522, #2a1838 55%, #141a2e); } }
 :root[data-theme="dark"] .w-app { color: #fff; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .w-app { color: #fff; } }
+/* Fechas especiales: el ícono es el del día (🫂, ❤️, 💍…) */
+.avatar.glyph.emoji { font-size: 22px; }
+.cal-day.has-sp:not(.sel) { background: rgba(175,82,222,.14); }
+.cal-day .cal-emo { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-size: 15px; line-height: 1; }
+.cal-day.has-sp .n { top: 9px; }

@@ -378,3 +378,6 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .cal-day.sel.has .n, .cal-day.sel.has-sp .n { color: #fff; }
 .cal-foot { text-align: center; font-size: 13px; color: var(--label2); padding: 10px 0 2px; }
 .cal-foot button { color: var(--accent); font-size: 13px; }
+
+/* Círculo de la fila en la lista con torta o corazón (SwiftUI: Circle + Image) */
+.avatar.glyph svg { width: 24px; height: 24px; color: #fff; }

@@ -188,15 +188,22 @@ function countdown(n) {
   if (n === 0) return `<div class="countdown today">Hoy</div>`;
   return `<div class="countdown"><div class="n">${n}</div><div class="u">${n === 1 ? 'día' : 'días'}</div></div>`;
 }
+// Ícono de la fila en la lista: círculo con torta (cumpleaños) o corazón (fecha especial)
+const HEART_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.5s-7.8-4.7-7.8-10.6A4.4 4.4 0 0112 7.2a4.4 4.4 0 017.8 2.7c0 5.9-7.8 10.6-7.8 10.6z"/></svg>';
+function cakeIcon(p) {
+  const [a, b] = gradFor(p.id);
+  return `<div class="avatar glyph" style="background:linear-gradient(160deg,${a},${b})">${ic('cake', '', 2)}</div>`;
+}
+const heartIcon = () => `<div class="avatar glyph" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0)">${HEART_GLYPH}</div>`;
 function personRow(p) {
   const n = daysLeft(p.m, p.d), age = turningAge(p);
   const badges = (isRound(age) && S.rem.round ? `<span class="badge round">🎉 ${age}</span> ` : '') + (p.work && S.unlocked ? `<span class="badge work">Trabajo</span>` : '');
-  return `<button class="row person" data-a="open" data-id="${p.id}">${avatar(p)}<span class="grow"><div class="title-semibold">${esc(p.name)} ${badges}</div><div class="sub">${esc(subtitle(p))}</div></span>${countdown(n)}</button>`;
+  return `<button class="row person" data-a="open" data-id="${p.id}">${cakeIcon(p)}<span class="grow"><div class="title-semibold">${esc(p.name)} ${badges}</div><div class="sub">${esc(subtitle(p))}</div></span>${countdown(n)}</button>`;
 }
 function specialRow(sp) {
   const n = daysLeft(sp.m, sp.d);
   const yrs = sp.y ? nextDate(sp.m, sp.d).getFullYear() - sp.y : null;
-  return `<button class="row person" data-a="openSpecial" data-id="${sp.id}"><div class="avatar" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0);font-size:22px">${sp.emoji}</div><span class="grow"><div class="title-semibold">${esc(sp.name)} <span class="badge special">${esc(sp.kind)}</span></div><div class="sub">${monthDay(sp.m, sp.d)}${yrs ? ` · ${yrs} años` : ''}</div></span>${countdown(n)}</button>`;
+  return `<button class="row person" data-a="openSpecial" data-id="${sp.id}">${heartIcon()}<span class="grow"><div class="title-semibold">${esc(sp.name)} <span class="badge special">${esc(sp.kind)}</span></div><div class="sub">${monthDay(sp.m, sp.d)}${yrs ? ` · ${yrs} años` : ''}</div></span>${countdown(n)}</button>`;
 }
 
 /* ---------------- Pantallas: Cumpleaños ---------------- */

@@ -418,7 +418,7 @@ function screenSettings() {
   h += section(navRow({ icon: 'moon', color: '#1c1c1e', title: 'Apariencia', value: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' }[S.theme], a: 'go', extra: 'data-s="appearance"' }) +
     navRow({ icon: 'info', color: '#8e8e93', title: 'Ver bienvenida otra vez', a: 'onboarding' }), { header: 'General' });
   h += section(`<button class="row accent" data-a="restore">Restaurar compra</button>`, { footer: 'Si ya pagaste en otro iPhone con el mismo Apple ID, tocá Restaurar.' });
-  h += section(`<button class="row accent" data-a="${S.unlocked ? 'relock' : 'unlockNow'}">${S.unlocked ? 'Volver a bloquear (solo prototipo)' : 'Desbloquear sin pagar (solo prototipo)'}</button><button class="row destructive" data-a="resetDemo">Restablecer datos de ejemplo</button>`, { header: 'Prototipo', footer: 'Estas opciones existen solo en el prototipo para revisar el diseño.' });
+  h += section(`<button class="row accent" data-a="refresh">Actualizar prototipo</button><button class="row accent" data-a="${S.unlocked ? 'relock' : 'unlockNow'}">${S.unlocked ? 'Volver a bloquear (solo prototipo)' : 'Desbloquear sin pagar (solo prototipo)'}</button><button class="row destructive" data-a="resetDemo">Restablecer datos de ejemplo</button>`, { header: 'Prototipo', footer: 'Estas opciones existen solo en el prototipo para revisar el diseño.' });
   h += `<div class="section-footer" style="text-align:center;padding-bottom:30px">Unforgettables · prototipo de diseño</div>`;
   return `<div class="screen" data-key="settings">${navbar({})}<div class="scroll" data-key="settings-scroll"><div class="large-title">Ajustes</div>${h}</div></div>`;
 }
@@ -696,6 +696,7 @@ const A = {
   restore() { if (S.unlocked) { toast('Ya está todo desbloqueado', '✅'); return; } toast('No encontramos compras con este Apple ID', 'ℹ️'); },
   unlockNow() { S.unlocked = true; persist(); toast('Desbloqueado (prototipo)', '🔓'); },
   relock() { S.unlocked = false; S.widgetTheme = 'classic'; persist(); toast('Bloqueado otra vez', '🔒'); },
+  refresh() { location.replace(location.pathname + '?r=' + Date.now()); },
   resetDemo() { S.people = demoPeople(); S.specials = demoSpecials(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Datos de ejemplo restablecidos', '↺'); },
   onboarding() { present({ s: 'onboarding', step: 0 }); },
   obNext() { topOverlay().step++; render(); },

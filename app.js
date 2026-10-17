@@ -350,9 +350,10 @@ function screenSpecial(id) {
   const n = daysLeft(sp.m, sp.d);
   let h = `<div class="detail-head"><div class="avatar lg" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0);font-size:44px">${sp.emoji}</div><h2>${esc(sp.name)}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(sp.kind)}</div></div>`;
   h += `<div class="stats"><div class="stat"><div class="n">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 1 ? 'día' : 'días'}</div></div>${sp.y ? `<div class="stat"><div class="n">${nextDate(sp.m, sp.d).getFullYear() - sp.y}</div><div class="l">años</div></div>` : ''}</div>`;
+  h += section(navRow({ icon: 'calendar', color: '#af52de', title: 'Cuándo es', value: monthDay(sp.m, sp.d), a: 'editSpecial', extra: `data-id="${sp.id}"` }), { header: 'Fecha' });
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: `${beforeLabel(S.rem.before)} (general)`, a: 'fake', extra: 'data-msg="Mismo selector que en cada persona"' }), { header: 'Recordatorio' });
   h += section(`<button class="row destructive" data-a="fake" data-msg="Se eliminaría la fecha">Eliminar fecha</button>`);
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Unforgettables'), blur: true })}<div class="scroll">${h}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="editSpecial" data-id="${sp.id}">Editar</button>`, blur: true })}<div class="scroll">${h}</div></div>`;
 }
 
 function screenSuggest(id) {
@@ -573,7 +574,7 @@ const addKindSwitch = cur => `<div class="segmented"><button class="${cur === 'c
 function sheetAddSpecial(o) {
   const dr = o.draft;
   const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Fecha del año', '📅'], ['Otra', '⭐️']];
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: dr.id ? 'Editar fecha' : 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
     `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
 }
 
@@ -735,7 +736,16 @@ const A = {
   addSpecial() { present({ s: 'addSpecial', draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); },
   addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: d.n, kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Fecha del año', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
   specKind(d) { topOverlay().draft.kind = d.v; render(); },
-  specSave() { const dr = topOverlay().draft; if (!dr.name.trim()) return; S.specials.push({ id: 's' + Date.now(), name: dr.name.trim(), m: dr.m, d: Math.min(dr.d, daysIn(dr.m)), kind: dr.kind, emoji: dr.emoji || (dr.kind === 'Aniversario' ? '💞' : dr.kind === 'Otra' ? '⭐️' : '📅') }); S.overlays.pop(); persist(); toast('Fecha agregada', '💜'); },
+  specSave() {
+    const dr = topOverlay().draft; if (!dr.name.trim()) return;
+    const emoji = { Aniversario: '💞', Casamiento: '💍', Otra: '⭐️' }[dr.kind] || '📅';
+    const data = { name: dr.name.trim(), m: dr.m, d: Math.min(dr.d, daysIn(dr.m)), kind: dr.kind };
+    const sp = dr.id && S.specials.find(x => x.id === dr.id);
+    if (sp) Object.assign(sp, data, sp.kind === dr.kind ? {} : { emoji });
+    else S.specials.push({ id: 's' + Date.now(), ...data, emoji: dr.emoji || emoji });
+    S.overlays.pop(); persist(); toast(sp ? 'Fecha actualizada' : 'Fecha agregada', '💜');
+  },
+  editSpecial(d) { const sp = S.specials.find(x => x.id === d.id); present({ s: 'addSpecial', draft: { id: sp.id, name: sp.name, kind: sp.kind, m: sp.m, d: sp.d } }); },
   buy() { present({ s: 'store' }); },
   confirmBuy() { const o = topOverlay(); if (o.busy) return; o.busy = true; render(); setTimeout(() => { S.unlocked = true; S.overlays = S.overlays.filter(x => x.s !== 'store' && x.s !== 'paywall'); persist(); toast('¡Listo! Todo desbloqueado', '🎉'); }, 900); },
   restore() { if (S.unlocked) { toast('Ya está todo desbloqueado', '✅'); return; } toast('No encontramos compras con este Apple ID', 'ℹ️'); },

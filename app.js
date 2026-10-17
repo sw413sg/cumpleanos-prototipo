@@ -458,14 +458,17 @@ function screenGifts() {
       ${mock('✨', p && p.gustos[0] ? `Algo de ${esc(p.gustos[0])}` : 'Una idea para vos', `Sugerencia para ${esc(p ? p.name.split(' ')[0] : 'Mora')}`)}${mock('🔗', 'Vinilo de Taylor Swift', 'Guardada desde Mercado Libre')}</div></div>
       <div class="wk-info"><div class="grow"><div class="t">Ideas de regalo</div><div class="s">Guardá ideas desde Safari o Mercado Libre con <b>Compartir</b>, y recibí sugerencias según sus gustos.</div></div>${lockBadge()}</div></button>`;
   } else {
-    const np = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d))[0];
-    if (np) h += gkCard(`<div class="gk-head gk-person">${cakeIcon(np)}<span class="t">Sugerencias para ${esc(np.name.split(' ')[0])}</span></div>`,
-      suggestionsFor(np).slice(0, 3).map(([what, why]) => `<button class="gk-row" data-a="suggest" data-id="${np.id}"><span class="gk-bulb">${ic('sparkles', '', 2)}</span><span class="grow"><div class="w-rname">${esc(what)}</div><div class="w-sub">Porque le gusta: ${esc(why)}</div></span>${chev()}</button>`).join(''));
-    const withIdeas = S.people.filter(p => p.ideas.length);
-    for (const p of withIdeas) h += gkCard(`<div class="gk-head gk-person">${cakeIcon(p)}<span class="t">${esc(p.name)}</span></div>`,
-      p.ideas.map(i => `<button class="gk-row" data-a="open" data-id="${p.id}"><span class="gk-bulb">${ic('bulb', '', 2)}</span><span class="grow"><div class="w-rname">${esc(i.what)}</div><div class="w-sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join(''));
-    if (!withIdeas.length) h += `<div class="empty" style="padding-top:20px">${ic('bulb')}<h3>Sin ideas guardadas</h3><p>Probá guardando una desde el menú Compartir.</p></div>`;
-    h += `<button class="gk-card gk-try" data-a="shareDemo">${ic('share', '', 2)}Probar: guardar desde Compartir</button><div class="gk-note">Simula lo que pasa cuando estás mirando un producto en Safari o Mercado Libre y tocás Compartir → Unforgettables.</div>`;
+    // Una tarjeta por persona: primero lo que guardaste, después sugerencias por sus gustos
+    const byNext = [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d));
+    const shown = byNext.filter((p, i) => i === 0 || p.ideas.length);
+    for (const p of shown) {
+      const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w)).slice(0, p.ideas.length ? 2 : 3);
+      const n = daysLeft(p.m, p.d);
+      h += gkCard(`<div class="gk-head gk-person">${cakeIcon(p)}<span class="t grow">${esc(p.name)}</span><span class="s">${n === 0 ? 'Hoy' : `en ${n} ${n === 1 ? 'día' : 'días'}`}</span></div>` +
+        (p.ideas.length ? `<div class="gk-sub">Guardadas</div>` + p.ideas.map(i => `<button class="gk-row" data-a="openGifts" data-id="${p.id}"><span class="gk-bulb">${ic('bulb', '', 2)}</span><span class="grow"><div class="w-rname">${esc(i.what)}</div><div class="w-sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join('') : ''),
+        (sug.length ? `<div class="gk-sub">Sugerencias por sus gustos</div>` + sug.map(([what, why]) => `<button class="gk-row" data-a="suggest" data-id="${p.id}"><span class="gk-bulb">${ic('sparkles', '', 2)}</span><span class="grow"><div class="w-rname">${esc(what)}</div><div class="w-sub">Porque le gusta: ${esc(why)}</div></span>${chev()}</button>`).join('') : ''));
+    }
+    h += `<button class="gk-card gk-try" data-a="shareDemo">${ic('share', '', 2)}Probar: guardar desde Compartir</button><div class="gk-note">Cuando mirás algo en Safari o Mercado Libre, tocás Compartir → Unforgettables y la idea se guarda acá. Este botón lo simula.</div>`;
   }
   h += `</div>`;
   return `<div class="screen" data-key="gifts">${navbar({ left: backBtn('Unforgettables') })}<div class="scroll" data-key="gifts-scroll"><div class="large-title">Regalos</div>${h}</div></div>`;

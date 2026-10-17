@@ -573,10 +573,13 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wk-stage { --wall: linear-gradient(160deg, #3a1522, #2a1838 55%, #141a2e); } }
 :root[data-theme="dark"] .w-app { color: #fff; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .w-app { color: #fff; } }
-/* Fechas especiales: el ícono es el del día (🫂, ❤️, 💍…) */
-.avatar.glyph.emoji { font-size: 22px; }
+/* Fechas especiales: ícono de línea según el día (corazón, anillo, personas…) */
+.avatar.glyph.lg svg { width: 46px; height: 46px; }
+.w-emoji svg { width: 17px; height: 17px; color: #fff; }
 .cal-day.has-sp:not(.sel) { background: rgba(175,82,222,.14); }
-.cal-day .cal-emo { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-size: 15px; line-height: 1; }
+.cal-day .cal-emo { position: absolute; left: 0; right: 0; top: 6px; display: flex; justify-content: center; color: var(--purple); }
+.cal-day .cal-emo svg { width: 15px; height: 15px; }
+.cal-day.sel .cal-emo { color: #fff; }
 .cal-day.has-sp .n { top: 9px; }
 
 /* Lupa para buscar la idea en Mercado Libre */

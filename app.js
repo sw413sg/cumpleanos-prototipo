@@ -247,6 +247,11 @@ function screenList() {
         const t = today[0], age = turningAge(t);
         body += `<button class="hero" data-a="open" data-id="${t.id}"><div class="confetti"></div>${avatar(t)}<div><div class="t1">🎂 Hoy es el cumple de</div><div class="t2">${esc(t.name)}</div><div class="t3">${age ? `Cumple ${age} años · ` : ''}Mandale un mensaje</div></div></button>`;
       }
+      const spToday = S.listMode === 'birthdays' || q ? [] : specials.filter(sp => daysLeft(sp.m, sp.d) === 0);
+      if (spToday.length) {
+        const sp = spToday[0], yrs = sp.y ? TODAY.getFullYear() - sp.y : null;
+        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}"><div class="hearts"></div><div class="avatar">${sp.emoji || '💜'}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
+      }
       if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
       if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
       if (workPeople.length) body += section(workPeople.map(personRow).join(''), { header: 'Trabajo', footer: 'Modo trabajo: tus contactos laborales separados, con notas. Lo cambiás en Ajustes.' });

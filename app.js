@@ -135,103 +135,25 @@ const CONTACTS = [
 const AGENDA = [...CONTACTS, { id: 'n1', name: 'Agus Ferreyra', photo: true }, { id: 'n2', name: 'Caro Méndez' }, { id: 'n3', name: 'Juli Sosa' }, { id: 'n4', name: 'Mati Quiroga', photo: true }, { id: 'n5', name: 'Pili Ortega' }]
   .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
-// Base de gustos: palabras sueltas agrupadas, cada una con ideas de regalo. Las sugerencias salen de acá.
-// (SwiftUI: un JSON en el bundle; se puede ampliar sin tocar código)
-const GUSTOS = [
-  ['Comida y bebida', [
-    ['Café', [['Kit de café: prensa francesa + 250 g de especialidad', 'ARS 38.000'], ['Taza térmica linda', 'ARS 18.000']]],
-    ['Mate', [['Mate de calabaza con bombilla de alpaca', 'ARS 26.000'], ['Yerba con hierbas en lata', 'ARS 9.000']]],
-    ['Vino', [['Malbec de Valle de Uco', 'ARS 30.000'], ['Cata de vinos para dos', 'ARS 45.000']]],
-    ['Cerveza', [['Box de cervezas artesanales', 'ARS 22.000'], ['Kit para hacer cerveza en casa', 'ARS 55.000']]],
-    ['Chocolate', [['Chocolates amargos Rapanui', 'ARS 18.000'], ['Taller de bombones', 'ARS 35.000']]],
-    ['Alfajores', [['Caja de alfajores Havanna x12', 'ARS 28.000']]],
-    ['Sushi', [['Box de sushi para dos', 'ARS 40.000'], ['Kit para hacer sushi en casa', 'ARS 24.000']]],
-    ['Cocina', [['Clase de cocina', 'ARS 40.000'], ['Cuchillo de chef', 'ARS 50.000'], ['Libro de recetas de Narda Lepes', 'ARS 30.000']]],
-    ['Asado', [['Set de cuchillos para asado', 'ARS 35.000'], ['Tabla de madera para picadas', 'ARS 20.000']]],
-    ['Pastelería', [['Batidora de mano', 'ARS 45.000'], ['Set de moldes y mangas', 'ARS 16.000']]],
-    ['Té', [['Caja de tés en hebras', 'ARS 15.000'], ['Tetera de vidrio con infusor', 'ARS 20.000']]],
-  ]],
-  ['Deportes', [
-    ['Fútbol', [['Pelota oficial', 'ARS 40.000'], ['Entradas para la cancha', 'ARS 35.000']]],
-    ['River', [['Camiseta de River 2026', 'ARS 75.000'], ['Visita al Monumental', 'ARS 25.000']]],
-    ['Boca', [['Camiseta de Boca 2026', 'ARS 75.000'], ['Visita a la Bombonera', 'ARS 25.000']]],
-    ['Running', [['Riñonera para correr', 'ARS 19.000'], ['Inscripción a una carrera de 10K', 'ARS 30.000']]],
-    ['Yoga', [['Mat de yoga', 'ARS 28.000'], ['Clase de yoga al aire libre', 'ARS 20.000']]],
-    ['Gimnasio', [['Botella térmica', 'ARS 20.000'], ['Bandas elásticas', 'ARS 12.000']]],
-    ['Bici', [['Luces para la bici', 'ARS 18.000'], ['Bolso para el manubrio', 'ARS 22.000']]],
-    ['Natación', [['Antiparras con estuche', 'ARS 15.000'], ['Toalla de microfibra', 'ARS 14.000']]],
-    ['Tenis', [['Tubo de pelotas y overgrips', 'ARS 16.000'], ['Clase con profe', 'ARS 25.000']]],
-    ['Pádel', [['Paletero', 'ARS 35.000'], ['Pelotas de pádel x3', 'ARS 12.000']]],
-    ['Montaña', [['Linterna frontal', 'ARS 20.000'], ['Mochila de trekking', 'ARS 70.000']]],
-  ]],
-  ['Música', [
-    ['Música', [['Parlante bluetooth', 'ARS 45.000'], ['Entradas para un recital', 'ARS 60.000']]],
-    ['Vinilos', [['Un vinilo de su banda favorita', 'ARS 50.000'], ['Bandeja giradiscos', 'ARS 180.000']]],
-    ['Taylor Swift', [['Vinilo de Taylor Swift', 'ARS 55.000'], ['Pulseras de la amistad para armar', 'ARS 10.000']]],
-    ['Rock nacional', [['Libro de la historia del rock nacional', 'ARS 28.000'], ['Remera de Soda Stereo', 'ARS 25.000']]],
-    ['Guitarra', [['Juego de cuerdas y púas', 'ARS 15.000'], ['Afinador', 'ARS 12.000']]],
-    ['Piano', [['Libro de partituras', 'ARS 20.000']]],
-    ['Podcasts', [['Auriculares inalámbricos', 'ARS 60.000']]],
-  ]],
-  ['Lectura y cine', [
-    ['Libros', [['Gift card de una librería', 'ARS 25.000'], ['Lámpara de lectura', 'ARS 18.000']]],
-    ['Isabel Allende', [['"El viento conoce mi nombre", de Isabel Allende', 'ARS 24.000']]],
-    ['Novelas', [['La última novela de Claudia Piñeiro', 'ARS 25.000']]],
-    ['Historietas', [['Mafalda: todas las tiras', 'ARS 40.000'], ['El Eternauta', 'ARS 35.000']]],
-    ['Manga', [['Tomo 1 de un manga nuevo', 'ARS 12.000']]],
-    ['Series', [['Un mes de una plataforma', 'ARS 10.000'], ['Manta para el sillón', 'ARS 30.000']]],
-    ['Cine', [['Entradas para el cine con pochoclos', 'ARS 20.000'], ['Proyector chico', 'ARS 120.000']]],
-    ['Teatro', [['Entradas para el teatro', 'ARS 30.000']]],
-  ]],
-  ['Casa y plantas', [
-    ['Plantas', [['Monstera chica con maceta de cerámica', 'ARS 25.000'], ['Kit de huerta en el balcón', 'ARS 20.000']]],
-    ['Suculentas', [['Terrario con suculentas', 'ARS 22.000']]],
-    ['Deco', [['Lámpara de mesa', 'ARS 35.000'], ['Lámina enmarcada', 'ARS 25.000']]],
-    ['Velas', [['Vela de soja aromática', 'ARS 14.000'], ['Difusor de aromas', 'ARS 20.000']]],
-    ['Perros', [['Correa y collar lindos', 'ARS 18.000'], ['Cama para perro', 'ARS 35.000']]],
-    ['Gatos', [['Rascador', 'ARS 30.000'], ['Fuente de agua para gatos', 'ARS 28.000']]],
-  ]],
-  ['Arte y manualidades', [
-    ['Cerámica', [['Taller de torno de cerámica', 'ARS 45.000'], ['Taza de cerámica artesanal', 'ARS 15.000']]],
-    ['Tejer', [['Kit de agujas de bambú', 'ARS 15.000'], ['Ovillos de lana merino', 'ARS 20.000']]],
-    ['Dibujo', [['Set de lápices acuarelables', 'ARS 22.000'], ['Cuaderno de bocetos', 'ARS 12.000']]],
-    ['Fotografía', [['Cámara instantánea', 'ARS 90.000'], ['Impresión de fotos en álbum', 'ARS 25.000']]],
-    ['Costura', [['Caja de costura completa', 'ARS 20.000']]],
-  ]],
-  ['Tecnología y juegos', [
-    ['Videojuegos', [['Gift card de PlayStation', 'ARS 30.000'], ['Joystick extra', 'ARS 70.000']]],
-    ['Juegos de mesa', [['Catan', 'ARS 45.000'], ['Dixit', 'ARS 40.000']]],
-    ['Tecnología', [['Cargador portátil', 'ARS 25.000'], ['Smartwatch', 'ARS 120.000']]],
-    ['Lego', [['Lego Technic', 'ARS 60.000'], ['Lego Jurassic World', 'ARS 60.000']]],
-    ['Dinosaurios', [['Libro de dinosaurios con realidad aumentada', 'ARS 22.000'], ['Kit de excavación de fósiles', 'ARS 15.000']]],
-  ]],
-  ['Estilo y cuidado', [
-    ['Moda', [['Gift card de su marca favorita', 'ARS 40.000']]],
-    ['Perfumes', [['Perfume en tamaño viaje', 'ARS 45.000']]],
-    ['Skincare', [['Set de cuidado de la piel', 'ARS 35.000']]],
-    ['Relojes', [['Correa nueva para su reloj', 'ARS 20.000']]],
-  ]],
-  ['Salidas y viajes', [
-    ['Viajes', [['Neceser de viaje', 'ARS 18.000'], ['Almohada de viaje', 'ARS 15.000']]],
-    ['Camping', [['Farol recargable', 'ARS 20.000'], ['Silla plegable', 'ARS 30.000']]],
-    ['Experiencias', [['Escape room para dos', 'ARS 30.000'], ['Paseo en kayak', 'ARS 35.000']]],
-    ['Spa', [['Día de spa', 'ARS 60.000']]],
-    ['Playa', [['Lona de playa', 'ARS 20.000'], ['Parlante resistente al agua', 'ARS 40.000']]],
-  ]],
-];
+// La base de gustos (GUSTOS) está en gustos.js
 const gNorm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const GUSTO_LIST = GUSTOS.flatMap(([, items]) => items);
-// Un gusto anotado ("Café de especialidad") encuentra su palabra de la base ("Café")
+// Un gusto anotado ("Café de especialidad", "fulbo") encuentra su gusto de la base por nombre o sinónimo
 function gustoMatch(g) {
-  const n = gNorm(g);
-  return GUSTO_LIST.find(([w]) => gNorm(w) === n) || GUSTO_LIST.find(([w]) => n.split(/\s+/).includes(gNorm(w)) || gNorm(w).split(/\s+/).includes(n));
+  const n = gNorm(g.trim()), words = n.split(/\s+/);
+  const names = ([w, syn]) => [gNorm(w), ...gNorm(syn).split('|')];
+  return GUSTO_LIST.find(e => names(e).includes(n)) || GUSTO_LIST.find(e => names(e).some(x => words.includes(x) || x.split(/\s+/).includes(n)));
 }
-// Sugerencias: las ideas de cada gusto, intercaladas para que no salgan todas del mismo
-function suggestionsFor(p) {
-  const per = p.gustos.map(g => { const m = gustoMatch(g); return m ? m[1].map(([what, price]) => [what, g, price]) : []; });
+const priceLabel = k => `ARS ${k}.000`;
+// Presupuesto de las sugerencias, en miles de pesos
+const BUDGETS = [['all', 'Todos', 0, 1e9], ['low', 'Hasta 20 mil', 0, 20], ['mid', '20 a 50 mil', 21, 50], ['high', 'Más de 50 mil', 51, 1e9]];
+// Sugerencias: las ideas de cada gusto, intercaladas (y arrancando en precios distintos) para que no salgan todas iguales. [idea, gusto, precio]
+function suggestionsFor(p, budget = 'all') {
+  const [, , lo, hi] = BUDGETS.find(b => b[0] === budget);
+  const per = p.gustos.map((g, i) => { const m = gustoMatch(g); if (!m) return []; const l = m[2].filter(([, k]) => k >= lo && k <= hi).map(([what, k]) => [what, g, k]); const r = (i * 2) % (l.length || 1); return [...l.slice(r), ...l.slice(0, r)]; });
   const out = [];
   for (let i = 0; per.some(l => l[i]); i++) per.forEach(l => { if (l[i] && !out.some(o => o[0] === l[i][0])) out.push(l[i]); });
-  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', '']);
+  return out.length || per.some(l => l.length) || budget !== 'all' ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General', 0]);
 }
 const SUGGESTIONS_DEFAULT = ['Gift card de una librería', 'Experiencia: clase de cocina', 'Una planta linda con maceta', 'Vino con nota escrita a mano'];
 
@@ -249,7 +171,7 @@ const S = {
   tab: 'list',
   stacks: { list: [{ s: 'list' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
-  search: '', listMode: 'all', giftsMode: 'history', widgetsMode: 'home',
+  search: '', listMode: 'all', giftsMode: 'history', budget: 'all', widgetsMode: 'home',
   listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
@@ -458,14 +380,16 @@ function screenSpecial(id) {
 
 function screenSuggest(id) {
   const p = person(id);
-  const list = suggestionsFor(p);
+  const list = suggestionsFor(p, S.budget);
   const given = p.gifts.map(g => g.what.toLowerCase());
   const rows = list.map(([what, why, price], i) => {
     const prev = p.gifts.find(g => similar(g.what, what));
     const savedIdea = p.ideas.some(x => x.what === what);
-    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}${price ? ` · ${price}` : ''}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-i="${i}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
+    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}${price ? ` · ${priceLabel(price)}` : ''}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span><button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
   }).join('');
-  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` + section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Se arman en el teléfono, sin internet.' });
+  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Para ${esc(p.name)}, armadas con sus gustos y lo que ya le regalaste.</div>` +
+    `<div class="chips" style="padding:0 16px 14px">${BUDGETS.map(([k, t]) => `<button class="chip ${S.budget === k ? 'sel' : ''}" data-a="budget" data-v="${k}">${t}</button>`).join('')}</div>` +
+    (rows ? '' : `<div class="empty" style="padding-top:20px">${ic('sparkles')}<h3>Nada en este presupuesto</h3><p>Probá con otro rango o sumale gustos.</p></div>`) + section(rows, { cls: '', footer: 'Salen de la base de gustos: cada gusto que anotás trae sus ideas. Se arman en el teléfono, sin internet.' });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(p.name.split(' ')[0]), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function similar(a, b) {
@@ -894,6 +818,7 @@ const A = {
   calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = null; render(); },
   addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
   giftsMode(d) { S.giftsMode = d.v; render(); },
+  budget(d) { S.budget = d.v; render(); },
   widgetsMode(d) { S.widgetsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },
   fake(d) { toast(d.msg || 'Solo de ejemplo', 'ℹ️'); },
@@ -944,7 +869,7 @@ const A = {
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },
   tzSet(d) { const o = topOverlay(); person(o.id).tz = d.v === 'null' ? null : d.v; persist(); render(); },
-  saveSuggestion(d) { const p = person(d.id); const sug = suggestionsFor(p)[+d.i]; p.ideas.push({ what: sug[0], src: 'Desde sugerencias' }); persist(); toast('Idea guardada', '💡'); },
+  saveSuggestion(d) { const p = person(d.id); p.ideas.push({ what: d.what, src: 'Desde sugerencias' }); persist(); toast('Idea guardada', '💡'); },
   remToggle(d) { S.rem[d.k] = !S.rem[d.k]; persist(); render(); },
   remBefore(d) { S.rem.before = +d.v; persist(); render(); },
   remRound(d) { S.rem.roundBefore = +d.v; persist(); render(); },

@@ -539,3 +539,32 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .ml-btn svg { width: 15px; height: 15px; }
 .gb-label { display: flex; align-items: center; gap: 5px; margin: 12px 0 0 44px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--orange); }
 .gb-label svg { width: 13px; height: 13px; }
+
+/* Lista de los widgets: cumples en gris, fechas en violeta */
+.widget .avatar.glyph.w-gray { background: linear-gradient(160deg, #b9bdc7, #8e939e); }
+.widget.lg .w-row { padding: 1px 0; }
+.widget.lg .w-lghead { padding-bottom: 2px; }
+/* Fechas fijadas (SwiftUI: widget configurable con AppIntent: qué fecha y qué estilo) */
+.wk-sec { display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: 600; letter-spacing: .38px; padding: 8px 4px 0; }
+.wk-tip { display: flex; gap: 12px; align-items: center; padding: 12px 16px; font-size: 14px; color: var(--label2); line-height: 1.35; }
+.wk-tip > svg { width: 22px; height: 22px; flex: none; color: var(--orange); }
+.widget.w-pin .w-name { color: #fff; }
+.w-pinhead { display: flex; align-items: center; gap: 10px; }
+.w-pinhead .grow { flex: 1; min-width: 0; }
+.w-clock { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.w-clock > div { background: rgba(255,255,255,.2); border-radius: 12px; padding: 7px 0 6px; text-align: center; line-height: 1; }
+.w-clock .tick { display: block; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.w-clock i { font-style: normal; font-size: 11px; font-weight: 600; opacity: .85; }
+.w-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.25); overflow: hidden; }
+.w-bar span { display: block; height: 100%; border-radius: 5px; background: #fff; }
+.w-barlab { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; opacity: .85; margin-top: 5px; }
+.widget.w-pin .w-count .u { color: rgba(255,255,255,.9); margin-right: 6px; }
+/* Hoja "Mostrar en un widget" */
+.pin-prev { margin: 4px 16px 18px; }
+.pin-prev .wk-stage { border-radius: 22px; padding: 18px; }
+.pin-styles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px 28px; }
+.pin-styles button { display: flex; gap: 10px; align-items: center; text-align: left; padding: 12px; border-radius: 18px; background: var(--cell); box-shadow: inset 0 0 0 2px transparent; }
+.pin-styles button.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.pin-styles .kp-ic { background: linear-gradient(160deg, #ffb340, #ff9500 60%, #e07b00); }
+.pin-styles b { display: block; font-size: 15px; }
+.pin-styles .s { display: block; font-size: 12px; color: var(--label2); line-height: 1.25; letter-spacing: 0; }

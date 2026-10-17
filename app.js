@@ -493,7 +493,7 @@ const canSave = dr => dr.name.trim() && !leapErr(dr);
 
 function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
-  let h = editing ? '' : section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
+  let h = editing ? '' : addKindSwitch('cumple') + section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
   h += section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
   h += section(`<div class="row"><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`, { header: 'Nombre' });
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
@@ -563,11 +563,13 @@ function sheetTz(o) {
   const opts = [['null', 'Igual que vos (Buenos Aires)'], ['Madrid', 'Madrid (+5 h)'], ['Miami', 'Miami (−1 h)'], ['Ciudad de México', 'Ciudad de México (−3 h)'], ['Sídney', 'Sídney (+14 h)']];
   return sheetWrap(o, navbar({ title: 'Dónde vive', right: `<button class="navbtn bold" data-a="dismiss">OK</button>` }) + `<div class="scroll">${section(checkList(opts, p.tz ?? 'null', 'tzSet'), { footer: 'El aviso del día te llega cuando allá ya es su cumple.' })}</div>`, { medium: true });
 }
+// Selector de arriba al tocar +: qué querés agregar
+const addKindSwitch = cur => `<div class="segmented"><button class="${cur === 'cumple' ? 'sel' : ''}" data-a="addKind" data-v="cumple">Cumpleaños</button><button class="${cur === 'fecha' ? 'sel' : ''}" data-a="addKind" data-v="fecha">Fecha${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
 function sheetAddSpecial(o) {
   const dr = o.draft;
   const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Fecha del año', '📅'], ['Otra', '⭐️']];
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
-    `<div class="scroll">${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
+    `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
 }
 
 const FEATURES = {
@@ -681,6 +683,12 @@ const A = {
   import() { present({ s: 'import', sel: new Set() }); },
   impToggle(d) { const o = topOverlay(); o.sel.has(d.id) ? o.sel.delete(d.id) : o.sel.add(d.id); render(); },
   impAll() { const o = topOverlay(); const selectable = AGENDA.filter(c => !S.people.some(p => p.name === c.name)); const all = selectable.every(c => o.sel.has(c.id)); o.sel = all ? new Set() : new Set(selectable.map(c => c.id)); render(); },
+  addKind(d) {
+    const cur = topOverlay().s === 'editor' ? 'cumple' : 'fecha'; if (d.v === cur) return;
+    if (d.v === 'fecha') { if (needUnlock('specials')) return; S.overlays.pop(); present({ s: 'addSpecial', fromPlus: true, draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); }
+    else { S.overlays.pop(); openEditor(null); }
+    topOverlay().fresh = false; render();
+  },
   bulkAdd() { S.overlays.pop(); present({ s: 'import', sel: new Set() }); },
   impNext() { const o = topOverlay(); o.rows = AGENDA.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m || null, d: c.d || null, y: c.y || null, photo: !!c.photo })); render(); },
   impBack() { delete topOverlay().rows; render(); },

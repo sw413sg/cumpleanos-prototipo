@@ -86,7 +86,7 @@ const ic = (n, cls = '', sw = 1.8) => `<svg class="${cls}" viewBox="0 0 24 24" f
 const chev = () => `<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L6.5 7l-5 5.5"/></svg>`;
 const backChev = () => `<svg viewBox="0 0 13 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2.5 10.5 11 19"/></svg>`;
 const NO_ADS = { t: 'Sin publicidad', s: 'Hacemos un esfuerzo extra en mantener la app libre de ads' };
-const lockBadge = (txt = 'USD 5') => `<span class="lock-badge">${ic('lock', '', 2.4)}${txt}</span>`;
+const lockBadge = (txt = 'Unlock') => `<span class="lock-badge">${ic('lock', '', 2.4)}${txt}</span>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ---------------- Datos de ejemplo ---------------- */
@@ -121,8 +121,8 @@ function demoSpecials() {
   ];
 }
 const CONTACTS = [
-  { id: 'c1', name: 'Mora Díaz', dup: true }, { id: 'c2', name: 'Pato Benítez', n: 12, y: 1988 }, { id: 'c3', name: 'Sofi Romero', n: 33 },
-  { id: 'c4', name: 'Tío Carlos', n: 58, y: 1966 }, { id: 'c5', name: 'Lucía Herrera', n: 96, y: 2001 }, { id: 'c6', name: 'Teo Ruiz', dup: true },
+  { id: 'c1', name: 'Mora Díaz', dup: true }, { id: 'c2', name: 'Pato Benítez', n: 12, y: 1988, photo: true }, { id: 'c3', name: 'Sofi Romero', n: 33 },
+  { id: 'c4', name: 'Tío Carlos', n: 58, y: 1966 }, { id: 'c5', name: 'Lucía Herrera', n: 96, y: 2001, photo: true }, { id: 'c6', name: 'Teo Ruiz', dup: true },
   { id: 'c7', name: 'Gonza Acosta', n: 171, y: 1992 }, { id: 'c8', name: 'Vicky Molina', n: 244, y: 1997 }, { id: 'c9', name: 'Ramiro Paz', n: 301 },
 ].map(c => { if (c.dup) { const pp = demoPeople().find(p => p.name === c.name); return { ...c, m: pp.m, d: pp.d, y: pp.y }; } const [m, d] = rel(c.n); return { ...c, m, d }; });
 
@@ -372,7 +372,7 @@ function screenGifts() {
     body += `<div class="section-footer" style="padding:0 32px 20px">El historial es gratis. Si vas a repetir un regalo, la app te avisa: “ya se lo regalaste”.</div>`;
   } else if (!S.unlocked) {
     body += `<div class="empty" style="padding-top:30px">${ic('bulb')}<h3>Ideas de regalo</h3><p>Guardá ideas desde Safari, Mercado Libre o cualquier app con el botón <b>Compartir</b>, y recibí sugerencias según los gustos de cada uno.</p></div>
-      <div style="padding:0 16px 24px"><button class="btn-primary" data-a="paywall" data-f="ideas">${ic('lock', '', 2.2)}Desbloquear por USD 5</button><div class="section-footer" style="text-align:center;padding:8px 0 0">Pago único y sin publicidad, nunca.</div></div>`;
+      <div style="padding:0 16px 24px"><button class="btn-primary" data-a="paywall" data-f="ideas">${ic('lock', '', 2.2)}Unlock</button><div class="section-footer" style="text-align:center;padding:8px 0 0">Pago único y sin publicidad, nunca.</div></div>`;
   } else {
     const withIdeas = S.people.filter(p => p.ideas.length);
     for (const p of withIdeas) body += section(p.ideas.map(i => `<button class="row" data-a="openFromGifts" data-id="${p.id}"><span class="grow">${esc(i.what)}<div class="sub">${esc(i.src || 'Idea guardada')}</div></span>${chev()}</button>`).join(''), { header: esc(p.name) });
@@ -401,7 +401,7 @@ function screenWidgets() {
   const photoP = S.people.find(x => x.photo) || p;
   let h = '';
   h += `<div class="section"><div class="section-header big">Gratis</div><div class="wall"><div class="wgrid" style="padding:0">${`<div class="wcard">${widgetSmall()}</div>`}<div class="wcard" style="display:flex;align-items:center;color:#fff;font-size:14px;font-weight:600;line-height:1.35;padding:6px">El próximo cumple, siempre a la vista.</div></div></div><div class="section-footer">Widget chico básico. Para agregarlo: mantené apretada la pantalla de inicio → ＋ → Unforgettables.</div></div>`;
-  h += `<div class="section"><div class="section-header big" style="display:flex;justify-content:space-between;align-items:center">Con el desbloqueo ${S.unlocked ? '<span class="unlocked-pill small">✓ Desbloqueado</span>' : lockBadge('USD 5')}</div></div>`;
+  h += `<div class="section"><div class="section-header big" style="display:flex;justify-content:space-between;align-items:center">Con el desbloqueo ${S.unlocked ? '<span class="unlocked-pill small">✓ Desbloqueado</span>' : lockBadge()}</div></div>`;
   // Temas
   const th = S.widgetTheme === 'classic' ? '' : 'theme-' + S.widgetTheme;
   h += `<div class="section"><div class="section-header">Temas y tamaños</div><div class="group"><div class="theme-dots">${THEMES.map(([k, name, bg]) => `<button class="theme-dot ${S.widgetTheme === k ? 'sel' : ''}" style="background:${bg};${k === 'classic' ? 'box-shadow:inset 0 0 0 1px var(--sep)' : ''}" data-a="widgetTheme" data-v="${k}" aria-label="${name}"></button>`).join('')}</div><div style="padding:0 16px 16px">${widgetMedium(th)}</div></div><div class="section-footer">Mediano y grande, con temas de color. ${S.unlocked ? '' : 'Tocá un color para ver el desbloqueo.'}</div></div>`;
@@ -418,7 +418,7 @@ function screenWidgets() {
 function screenSettings() {
   let h = '';
   if (S.unlocked) h += section(`<div class="row has-icon"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a)">${ic('star', '', 2)}</span><span class="grow"><div class="title-semibold">Todo desbloqueado</div><div class="sub">Gracias por apoyar la app 💛</div></span><span class="unlocked-pill">✓</span></div>`);
-  else h += section(`<button class="row has-icon" data-a="paywall" data-f="settings" style="padding-top:14px;padding-bottom:14px"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a);width:40px;height:40px;border-radius:10px;font-size:22px">🎁</span><span class="grow"><div class="title-semibold">Desbloquear todo</div><div class="sub">USD 5 · pago único, sin suscripción</div></span>${chev()}</button>`);
+  else h += section(`<button class="row has-icon" data-a="paywall" data-f="settings" style="padding-top:14px;padding-bottom:14px"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a);width:40px;height:40px;border-radius:10px;font-size:22px">🎁</span><span class="grow"><div class="title-semibold">Desbloquear todo</div><div class="sub">Pago único, sin suscripción</div></span>${chev()}</button>`);
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Recordatorios', value: S.rem.on ? `${S.rem.time} · ${S.rem.before ? S.rem.before + 'd antes' : 'mismo día'}` : 'Apagados', a: 'go', extra: 'data-s="reminders"' }) +
     navRow({ icon: 'download', color: '#34c759', title: 'Importar desde Contactos', a: 'import' }), { header: 'Avisos y datos' });
   const ex = (icon, color, title, s) => S.unlocked ? navRow({ icon, color, title, a: 'go', extra: `data-s="${s}"` }) : `<button class="row has-icon" data-a="paywall" data-f="${s}"><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><span class="grow">${title}</span>${lockBadge()}</button>`;
@@ -484,7 +484,8 @@ const canSave = dr => dr.name.trim() && !leapErr(dr);
 
 function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
-  let h = section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
+  let h = editing ? '' : section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
+  h += section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
   h += section(`<div class="row"><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`, { header: 'Nombre' });
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
     { header: 'Fecha', footer: dr.includeYear ? 'Vamos a mostrar la edad que cumple.' : 'Sin año no mostramos la edad, solo el día y el mes.' });
@@ -496,6 +497,7 @@ function sheetEditor(o) {
 }
 
 function sheetImport(o) {
+  if (o.rows) return sheetBulkReview(o);
   const dupe = c => S.people.some(p => p.name === c.name);
   const sel = o.sel; const selectable = CONTACTS.filter(c => !dupe(c));
   const all = selectable.length && selectable.every(c => sel.has(c.id));
@@ -504,8 +506,20 @@ function sheetImport(o) {
     return `<button class="row" data-a="impToggle" data-id="${c.id}" ${d ? 'disabled style="opacity:.55"' : ''}><span style="color:${on && !d ? 'var(--accent)' : 'var(--label3)'}">${ic(d ? 'minusCircle' : on ? 'checkCircle' : 'circle', 'check', 1.6).replace('class="check"', 'class="check" style="width:24px;height:24px"')}</span><span class="grow"><div>${esc(c.name)}</div><div class="sub">${esc(subtitle(c))}</div></span>${d ? '<span class="small muted">Ya está</span>' : ''}</button>`;
   }).join('');
   const n = sel.size;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Importar', right: `<button class="navbtn bold" data-a="impDo" ${n ? '' : 'disabled'}>${n ? `Importar (${n})` : 'Importar'}</button>` }) +
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Importar', right: `<button class="navbtn bold" data-a="impNext" ${n ? '' : 'disabled'}>${n ? `Siguiente (${n})` : 'Siguiente'}</button>` }) +
     `<div class="scroll">${section(rows, { header: `${CONTACTS.length} con cumpleaños`, footer: 'Los que ya están en la app, o repetidos, quedan deshabilitados.' })}</div><div style="padding:10px 16px calc(var(--safe-bottom) + 8px);border-top:.5px solid var(--sep);background:var(--bar);text-align:center"><button class="navbtn" data-a="impAll">${all ? 'Quitar selección' : 'Seleccionar todos'}</button></div>`);
+}
+
+function sheetBulkReview(o) {
+  const yrs = []; for (let y = THIS_YEAR; y >= 1900; y--) yrs.push(y);
+  const opts = (vals, cur, fmt = v => v) => vals.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${fmt(v)}</option>`).join('');
+  const rows = o.rows.map(r => `<div class="row bulk-row">${avatar(r)}<div class="grow"><input class="field bulk-name" data-id="${r.id}" value="${esc(r.name)}" placeholder="Nombre" autocomplete="off" autocapitalize="words"><div class="bulk-date">
+    <select data-bulk="d" data-id="${r.id}">${opts(Array.from({ length: daysIn(r.m, r.y) }, (_, i) => i + 1), r.d)}</select>
+    <select data-bulk="m" data-id="${r.id}">${opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], r.m, v => cap(MONTHS[v - 1]))}</select>
+    <select data-bulk="y" data-id="${r.id}"><option value="" ${r.y ? '' : 'selected'}>Sin año</option>${opts(yrs, r.y)}</select></div></div></div>`).join('');
+  const ok = o.rows.every(r => r.name.trim());
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="impBack">Atrás</button>`, title: 'Revisar', right: `<button class="navbtn bold" id="saveBtn" data-a="impAdd" ${ok ? '' : 'disabled'}>Agregar (${o.rows.length})</button>` }) +
+    `<div class="scroll">${section(rows, { header: 'Nombre y fecha', footer: 'Dejá el nombre del contacto o cambialo por cómo le decís vos. El año es opcional: sin año no mostramos la edad.' })}</div>`);
 }
 
 function giftWarning(p, text) {
@@ -552,14 +566,14 @@ const FEATURES = {
 const FEATURE_NAMES = { specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Los temas de widget', photo: 'La cuenta regresiva con foto', lock: 'El widget de bloqueo' };
 function sheetPaywall(o) {
   const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`).join('');
-  const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 5</b>, para siempre. Sin suscripción.</p>
+  const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.</p>
     <div class="pw-group-title">Extras</div>${f(FEATURES.extras)}<div class="pw-group-title">Widgets</div>${f(FEATURES.widgets)}
     <div class="pw-group-title">Siempre gratis</div><div class="s muted small" style="line-height:1.45;padding-bottom:10px">Cumpleaños y edades, importar desde Contactos, recordatorios con aviso anticipado, cumples redondos, historial de regalos, gustos y el widget básico.</div></div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss" aria-label="Cerrar" style="color:var(--label2)"><svg viewBox="0 0 24 24" style="width:30px;height:30px"><circle cx="12" cy="12" r="11" fill="var(--fill)"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` }) +
-    `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">Desbloquear por USD 5</button><div class="fine">Pago único · Sin publicidad · Se cobra a tu Apple ID · Vale en todos tus dispositivos</div>${o.soft ? '<button class="btn-plain" data-a="dismiss">Ahora no</button>' : ''}<div class="links"><button data-a="restore">Restaurar compra</button><button data-a="fake" data-msg="Abriría los Términos">Términos</button><button data-a="fake" data-msg="Abriría la Privacidad">Privacidad</button></div></div></div>`);
+    `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">Desbloquear por USD 4,99</button><div class="fine">Pago único · Sin publicidad · Se cobra a tu Apple ID · Vale en todos tus dispositivos</div>${o.soft ? '<button class="btn-plain" data-a="dismiss">Ahora no</button>' : ''}<div class="links"><button data-a="restore">Restaurar compra</button><button data-a="fake" data-msg="Abriría los Términos">Términos</button><button data-a="fake" data-msg="Abriría la Privacidad">Privacidad</button></div></div></div>`);
 }
 function sheetStore(o) {
-  return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">🎂</div><div style="flex:1"><div style="font-weight:600">Desbloquear todo</div><div class="muted small">Unforgettables · Compra dentro de la app</div></div></div><div class="kv"><span>Precio</span><span>USD 5,00 · pago único</span></div><div class="kv"><span>Cuenta</span><span>tu Apple ID</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : 'Comprar'}</button><button class="btn-plain" data-a="dismiss">Cancelar</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(Simulación de App Store — no se cobra nada)</div></div>`, { medium: true, short: true, cellBg: true });
+  return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">🎂</div><div style="flex:1"><div style="font-weight:600">Desbloquear todo</div><div class="muted small">Unforgettables · Compra dentro de la app</div></div></div><div class="kv"><span>Precio</span><span>USD 4,99 · pago único</span></div><div class="kv"><span>Cuenta</span><span>tu Apple ID</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : 'Comprar'}</button><button class="btn-plain" data-a="dismiss">Cancelar</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(Simulación de App Store — no se cobra nada)</div></div>`, { medium: true, short: true, cellBg: true });
 }
 function sheetShare(o) {
   const apps = [['💬', 'Mensajes', '#34c759'], ['🟢', 'WhatsApp', '#25d366'], ['✉️', 'Mail', '#1e90ff'], ['🎂', 'Unforgettables', 'linear-gradient(135deg,#ff7a85,#e23d4a)'], ['📝', 'Notas', '#ffcc00']];
@@ -656,7 +670,10 @@ const A = {
   import() { present({ s: 'import', sel: new Set() }); },
   impToggle(d) { const o = topOverlay(); o.sel.has(d.id) ? o.sel.delete(d.id) : o.sel.add(d.id); render(); },
   impAll() { const o = topOverlay(); const selectable = CONTACTS.filter(c => !S.people.some(p => p.name === c.name)); const all = selectable.every(c => o.sel.has(c.id)); o.sel = all ? new Set() : new Set(selectable.map(c => c.id)); render(); },
-  impDo() { const o = topOverlay(); const n = importContacts([...o.sel]); S.overlays.pop(); persist(); toast(`Importaste ${n} ${n === 1 ? 'cumpleaños' : 'cumpleaños'}`, '🎉'); },
+  bulkAdd() { S.overlays.pop(); present({ s: 'import', sel: new Set() }); },
+  impNext() { const o = topOverlay(); o.rows = CONTACTS.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m, d: c.d, y: c.y || null, photo: !!c.photo })); render(); },
+  impBack() { delete topOverlay().rows; render(); },
+  impAdd() { const o = topOverlay(); let n = 0; for (const r of o.rows) { if (S.people.some(p => p.name === r.name.trim())) continue; S.people.push({ id: 'imp-' + r.id, name: r.name.trim(), m: r.m, d: r.d, y: r.y, gustos: [], gifts: [], ideas: [], notes: '', work: false, tz: null, remind: null, photo: r.photo }); n++; } S.overlays.pop(); persist(); toast(`Agregaste ${n} cumpleaños`, '🎉'); },
   edYear() { const dr = topOverlay().draft; dr.includeYear = !dr.includeYear; render(); },
   edWork() { const dr = topOverlay().draft; dr.work = !dr.work; render(); },
   edPhoto() { const dr = topOverlay().draft; dr.photo = !dr.photo; render(); },
@@ -730,11 +747,13 @@ phone.addEventListener('input', e => {
   if (t.id === 'edNotes') { o.draft.notes = t.value; return; }
   if (t.id === 'giftWhat') { o.draft.what = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); document.getElementById('giftWarn').innerHTML = giftWarning(person(o.id), t.value); return; }
   if (t.id === 'gustoText') { o.text = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
+  if (t.classList.contains('bulk-name')) { o.rows.find(r => r.id === t.dataset.id).name = t.value; document.getElementById('saveBtn').disabled = !o.rows.every(r => r.name.trim()); return; }
   if (t.id === 'specName') { o.draft.name = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
 });
 phone.addEventListener('change', e => {
   const t = e.target, o = topOverlay();
   if (t.id === 'giftYear') o.draft.year = +t.value;
+  if (t.dataset.bulk) { const r = o.rows.find(x => x.id === t.dataset.id); r[t.dataset.bulk] = t.value ? +t.value : null; r.d = Math.min(r.d, daysIn(r.m, r.y)); render(); }
   if (t.id === 'remTime') { S.rem.time = t.value || '09:00'; persist(); render(); }
 });
 let wheelT;

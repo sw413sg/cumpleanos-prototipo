@@ -381,3 +381,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 
 /* Círculo de la fila en la lista con torta o corazón (SwiftUI: Circle + Image) */
 .avatar.glyph svg { width: 24px; height: 24px; color: #fff; }
+.bulk-row { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+.bulk-row .field { font-weight: 600; }
+.bulk-date { display: flex; gap: 6px; margin-top: 8px; }
+.bulk-date select { flex: 1; min-width: 0; border: 0; border-radius: 8px; background: var(--fill); padding: 6px 8px; font-size: 15px; -webkit-appearance: none; appearance: none; }

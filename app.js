@@ -121,8 +121,8 @@ function demoSpecials() {
   ];
 }
 const CONTACTS = [
-  { id: 'c1', name: 'Mora Díaz', dup: true }, { id: 'c2', name: 'Pato Benítez', n: 12, y: 1988 }, { id: 'c3', name: 'Sofi Romero', n: 33 },
-  { id: 'c4', name: 'Tío Carlos', n: 58, y: 1966 }, { id: 'c5', name: 'Lucía Herrera', n: 96, y: 2001 }, { id: 'c6', name: 'Teo Ruiz', dup: true },
+  { id: 'c1', name: 'Mora Díaz', dup: true }, { id: 'c2', name: 'Pato Benítez', n: 12, y: 1988, photo: true }, { id: 'c3', name: 'Sofi Romero', n: 33 },
+  { id: 'c4', name: 'Tío Carlos', n: 58, y: 1966 }, { id: 'c5', name: 'Lucía Herrera', n: 96, y: 2001, photo: true }, { id: 'c6', name: 'Teo Ruiz', dup: true },
   { id: 'c7', name: 'Gonza Acosta', n: 171, y: 1992 }, { id: 'c8', name: 'Vicky Molina', n: 244, y: 1997 }, { id: 'c9', name: 'Ramiro Paz', n: 301 },
 ].map(c => { if (c.dup) { const pp = demoPeople().find(p => p.name === c.name); return { ...c, m: pp.m, d: pp.d, y: pp.y }; } const [m, d] = rel(c.n); return { ...c, m, d }; });
 
@@ -484,7 +484,8 @@ const canSave = dr => dr.name.trim() && !leapErr(dr);
 
 function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
-  let h = section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
+  let h = editing ? '' : section(`<button class="row has-icon" data-a="bulkAdd"><span class="icon-sq" style="background:#34c759">${ic('people', '', 2)}</span><span class="grow" style="color:var(--accent);font-weight:600">Agregar masivamente contactos<div class="sub" style="font-weight:400">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`);
+  h += section(`<div class="row" style="justify-content:center;flex-direction:column;padding:16px">${dr.photo ? `<div class="avatar lg photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar lg" style="background:linear-gradient(160deg,#c7cbd4,#9aa0ab)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.6).replace('<svg', '<svg style="width:52px;height:52px"')}</div>`}<button class="navbtn" style="min-height:34px;font-size:15px" data-a="edPhoto">${dr.photo ? 'Cambiar foto' : 'Agregar foto'}</button></div>`);
   h += section(`<div class="row"><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"></div>`, { header: 'Nombre' });
   h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
     { header: 'Fecha', footer: dr.includeYear ? 'Vamos a mostrar la edad que cumple.' : 'Sin año no mostramos la edad, solo el día y el mes.' });
@@ -496,6 +497,7 @@ function sheetEditor(o) {
 }
 
 function sheetImport(o) {
+  if (o.rows) return sheetBulkReview(o);
   const dupe = c => S.people.some(p => p.name === c.name);
   const sel = o.sel; const selectable = CONTACTS.filter(c => !dupe(c));
   const all = selectable.length && selectable.every(c => sel.has(c.id));
@@ -504,8 +506,20 @@ function sheetImport(o) {
     return `<button class="row" data-a="impToggle" data-id="${c.id}" ${d ? 'disabled style="opacity:.55"' : ''}><span style="color:${on && !d ? 'var(--accent)' : 'var(--label3)'}">${ic(d ? 'minusCircle' : on ? 'checkCircle' : 'circle', 'check', 1.6).replace('class="check"', 'class="check" style="width:24px;height:24px"')}</span><span class="grow"><div>${esc(c.name)}</div><div class="sub">${esc(subtitle(c))}</div></span>${d ? '<span class="small muted">Ya está</span>' : ''}</button>`;
   }).join('');
   const n = sel.size;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Importar', right: `<button class="navbtn bold" data-a="impDo" ${n ? '' : 'disabled'}>${n ? `Importar (${n})` : 'Importar'}</button>` }) +
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Importar', right: `<button class="navbtn bold" data-a="impNext" ${n ? '' : 'disabled'}>${n ? `Siguiente (${n})` : 'Siguiente'}</button>` }) +
     `<div class="scroll">${section(rows, { header: `${CONTACTS.length} con cumpleaños`, footer: 'Los que ya están en la app, o repetidos, quedan deshabilitados.' })}</div><div style="padding:10px 16px calc(var(--safe-bottom) + 8px);border-top:.5px solid var(--sep);background:var(--bar);text-align:center"><button class="navbtn" data-a="impAll">${all ? 'Quitar selección' : 'Seleccionar todos'}</button></div>`);
+}
+
+function sheetBulkReview(o) {
+  const yrs = []; for (let y = THIS_YEAR; y >= 1900; y--) yrs.push(y);
+  const opts = (vals, cur, fmt = v => v) => vals.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${fmt(v)}</option>`).join('');
+  const rows = o.rows.map(r => `<div class="row bulk-row">${avatar(r)}<div class="grow"><input class="field bulk-name" data-id="${r.id}" value="${esc(r.name)}" placeholder="Nombre" autocomplete="off" autocapitalize="words"><div class="bulk-date">
+    <select data-bulk="d" data-id="${r.id}">${opts(Array.from({ length: daysIn(r.m, r.y) }, (_, i) => i + 1), r.d)}</select>
+    <select data-bulk="m" data-id="${r.id}">${opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], r.m, v => cap(MONTHS[v - 1]))}</select>
+    <select data-bulk="y" data-id="${r.id}"><option value="" ${r.y ? '' : 'selected'}>Sin año</option>${opts(yrs, r.y)}</select></div></div></div>`).join('');
+  const ok = o.rows.every(r => r.name.trim());
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="impBack">Atrás</button>`, title: 'Revisar', right: `<button class="navbtn bold" id="saveBtn" data-a="impAdd" ${ok ? '' : 'disabled'}>Agregar (${o.rows.length})</button>` }) +
+    `<div class="scroll">${section(rows, { header: 'Nombre y fecha', footer: 'Dejá el nombre del contacto o cambialo por cómo le decís vos. El año es opcional: sin año no mostramos la edad.' })}</div>`);
 }
 
 function giftWarning(p, text) {
@@ -656,7 +670,10 @@ const A = {
   import() { present({ s: 'import', sel: new Set() }); },
   impToggle(d) { const o = topOverlay(); o.sel.has(d.id) ? o.sel.delete(d.id) : o.sel.add(d.id); render(); },
   impAll() { const o = topOverlay(); const selectable = CONTACTS.filter(c => !S.people.some(p => p.name === c.name)); const all = selectable.every(c => o.sel.has(c.id)); o.sel = all ? new Set() : new Set(selectable.map(c => c.id)); render(); },
-  impDo() { const o = topOverlay(); const n = importContacts([...o.sel]); S.overlays.pop(); persist(); toast(`Importaste ${n} ${n === 1 ? 'cumpleaños' : 'cumpleaños'}`, '🎉'); },
+  bulkAdd() { S.overlays.pop(); present({ s: 'import', sel: new Set() }); },
+  impNext() { const o = topOverlay(); o.rows = CONTACTS.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m, d: c.d, y: c.y || null, photo: !!c.photo })); render(); },
+  impBack() { delete topOverlay().rows; render(); },
+  impAdd() { const o = topOverlay(); let n = 0; for (const r of o.rows) { if (S.people.some(p => p.name === r.name.trim())) continue; S.people.push({ id: 'imp-' + r.id, name: r.name.trim(), m: r.m, d: r.d, y: r.y, gustos: [], gifts: [], ideas: [], notes: '', work: false, tz: null, remind: null, photo: r.photo }); n++; } S.overlays.pop(); persist(); toast(`Agregaste ${n} cumpleaños`, '🎉'); },
   edYear() { const dr = topOverlay().draft; dr.includeYear = !dr.includeYear; render(); },
   edWork() { const dr = topOverlay().draft; dr.work = !dr.work; render(); },
   edPhoto() { const dr = topOverlay().draft; dr.photo = !dr.photo; render(); },
@@ -730,11 +747,13 @@ phone.addEventListener('input', e => {
   if (t.id === 'edNotes') { o.draft.notes = t.value; return; }
   if (t.id === 'giftWhat') { o.draft.what = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); document.getElementById('giftWarn').innerHTML = giftWarning(person(o.id), t.value); return; }
   if (t.id === 'gustoText') { o.text = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
+  if (t.classList.contains('bulk-name')) { o.rows.find(r => r.id === t.dataset.id).name = t.value; document.getElementById('saveBtn').disabled = !o.rows.every(r => r.name.trim()); return; }
   if (t.id === 'specName') { o.draft.name = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
 });
 phone.addEventListener('change', e => {
   const t = e.target, o = topOverlay();
   if (t.id === 'giftYear') o.draft.year = +t.value;
+  if (t.dataset.bulk) { const r = o.rows.find(x => x.id === t.dataset.id); r[t.dataset.bulk] = t.value ? +t.value : null; r.d = Math.min(r.d, daysIn(r.m, r.y)); render(); }
   if (t.id === 'remTime') { S.rem.time = t.value || '09:00'; persist(); render(); }
 });
 let wheelT;

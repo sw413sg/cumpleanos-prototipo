@@ -153,7 +153,7 @@ const S = {
   stacks: { list: [{ s: 'list' }], gifts: [{ s: 'gifts' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
   search: '', listMode: 'all', giftsMode: 'history',
-  listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: TODAY.getDate(),
+  listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
 function persist() {
@@ -297,6 +297,10 @@ function calendarBody() {
     const header = `${DAYNAMES[dt.getDay()]} ${sel} de ${MONTHS[m - 1]}`;
     h += items.length ? section(items.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header })
       : section(`<button class="row accent" data-a="addOnDay">${ic('plus', 'check', 2.2)}Agregar un cumple este día</button>`, { header, footer: 'Nadie cumple este día.' });
+    h += `<div style="text-align:center;margin:-14px 0 24px"><button class="navbtn" data-a="calDay" data-d="${sel}">Ver todo ${MONTHS[m - 1]}</button></div>`;
+  } else {
+    const all = Object.keys(byDay).map(Number).sort((a, b) => a - b).flatMap(d => byDay[d]);
+    if (all.length) h += section(all.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header: `Todo ${MONTHS[m - 1]}`, footer: 'Tocá un día para ver solo ese.' });
   }
   return h;
 }
@@ -663,9 +667,9 @@ const A = {
   suggest(d) { push({ s: 'suggest', id: d.id }); },
   listMode(d) { if (d.v === 'specials' && needUnlock('specials')) return; S.listMode = d.v; render(); },
   listView() { S.listView = S.listView === 'list' ? 'calendar' : 'list'; persist(); render(); },
-  calDay(d) { S.calD = +d.d; render(); },
+  calDay(d) { S.calD = S.calD === +d.d ? null : +d.d; render(); },
   calMove(d) { const t = new Date(S.calY, S.calM - 1 + +d.v, 1); S.calY = t.getFullYear(); S.calM = t.getMonth() + 1; S.calD = null; render(); },
-  calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = TODAY.getDate(); render(); },
+  calToday() { S.calY = TODAY.getFullYear(); S.calM = TODAY.getMonth() + 1; S.calD = null; render(); },
   addOnDay() { openEditor(null); const dr = topOverlay().draft; dr.m = S.calM; dr.d = S.calD; render(); },
   giftsMode(d) { S.giftsMode = d.v; render(); },
   paywall(d) { present({ s: 'paywall', feature: d.f }); },

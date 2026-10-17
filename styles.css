@@ -585,3 +585,5 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 /* Lupa para buscar la idea en Mercado Libre */
 .ml-btn { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #2d3277; background: #ffe600; }
 .ml-btn svg { width: 15px; height: 15px; }
+.gb-label { display: flex; align-items: center; gap: 5px; margin: 12px 0 0 44px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--orange); }
+.gb-label svg { width: 13px; height: 13px; }

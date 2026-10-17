@@ -406,7 +406,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .kp.fecha.sel { background: linear-gradient(135deg, #c86dd7, #af52de 55%, #7b2fbf); box-shadow: 0 6px 16px rgba(123,47,191,.28); }
 .kp.sel .kp-ic { background: rgba(255,255,255,.25); }
 .kp.sel .kp-t { text-shadow: 0 1px 6px rgba(0,0,0,.3); }
-.bulk-btn { display: flex; align-items: center; gap: 12px; margin: 0 16px 16px; width: calc(100% - 32px); padding: 12px 14px; border-radius: 18px; background: var(--cell); text-align: left; font-size: 16px; font-weight: 600; color: var(--label); }
+.bulk-btn { display: flex; align-items: center; gap: 12px; margin: -14px 16px 28px; width: calc(100% - 32px); padding: 12px 14px; border-radius: 18px; background: var(--cell); text-align: left; font-size: 16px; font-weight: 600; color: var(--label); }
 .bulk-btn .kp-ic { background: linear-gradient(160deg, #6be3a0, #34c759 60%, #1e9e48); }
 .bulk-btn .sub { font-weight: 400; }
 .ed-head { display: flex; align-items: center; gap: 14px; margin: 0 16px 28px; padding: 14px; border-radius: 18px; background: var(--cell); }

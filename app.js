@@ -60,6 +60,10 @@ const P = {
   briefcase: '<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V5.5a1.5 1.5 0 011.5-1.5h3A1.5 1.5 0 0115 5.5v2M3.5 13h17"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.7 5.5 3.7 9s-1.2 6.5-3.7 9c-2.5-2.5-3.7-5.5-3.7-9S9.5 5.5 12 3z"/>',
   camera: '<path d="M4 8.5A1.5 1.5 0 015.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0120 8.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 17.5z"/><circle cx="12" cy="12.8" r="3.3"/>',
+  ring: '<circle cx="12" cy="15" r="6"/><path d="M9.5 3h5l2.5 3-5 3.5L7 6zM7 6h10"/>',
+  tie: '<path d="M9.5 3.5h5l-1.2 3h-2.6zM10.7 6.5L9 15.5l3 4 3-4-1.7-9"/>',
+  gradCap: '<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.8V16c1.6 1.4 3.5 2 5.5 2s3.9-.6 5.5-2v-4.2M21.5 9.5V15"/>',
+  balloon: '<path d="M12 15c-3 0-5.5-3-5.5-6.3a5.5 5.5 0 0111 0C17.5 12 15 15 12 15z"/><path d="M11 16.3h2M12 16.3c0 1.7-1.6 2.3-1.2 4.2"/>',
   people: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.4.2 4 1.7 4.5 4.4"/>',
   sparkles: '<path d="M10 3.5l1.6 4.6 4.6 1.6-4.6 1.6L10 16l-1.6-4.7-4.6-1.6 4.6-1.6zM17.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
   message: '<path d="M12 4C7 4 3.5 7.2 3.5 11c0 2 1 3.8 2.6 5.1L5.5 20l4-1.9c.8.2 1.6.3 2.5.3 5 0 8.5-3.2 8.5-7.2S17 4 12 4z"/>',
@@ -220,15 +224,16 @@ function cakeIcon(p) {
   const [a, b] = gradFor(p.id);
   return `<div class="avatar glyph" style="background:linear-gradient(160deg,${a},${b})">${ic('cake', '', 2)}</div>`;
 }
-// Ícono de cada fecha según qué día es (Día del Amigo 🫂, Día de la Madre ❤️…); si no se reconoce, el del tipo
-const SP_EMOJI = [[/madre/i, '❤️'], [/padre/i, '👔'], [/amig/i, '🫂'], [/infancia|niñ/i, '🧸'], [/gradua|recib/i, '🎓'], [/casamiento|boda/i, '💍'], [/aniversario|novi/i, '💞']];
-const KIND_EMOJI = { Aniversario: '💞', Casamiento: '💍', 'Fecha del año': '📅', Otra: '⭐️' };
-const spEmoji = sp => (SP_EMOJI.find(([re]) => re.test(sp.name)) || [])[1] || sp.emoji || KIND_EMOJI[sp.kind] || '💜';
-const spIcon = sp => `<div class="avatar glyph emoji" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0)">${spEmoji(sp)}</div>`;
-// Fondo del banner y del widget: el mismo ícono repetido
+// Ícono de cada fecha según qué día es (Día del Amigo: personas, Día de la Madre: corazón…); si no se reconoce, el del tipo
+const SP_ICON = [[/madre/i, 'heart'], [/padre/i, 'tie'], [/amig/i, 'people'], [/infancia|niñ/i, 'balloon'], [/gradua|recib/i, 'gradCap'], [/casamiento|boda/i, 'ring'], [/aniversario|novi/i, 'heart']];
+const KIND_ICON = { Aniversario: 'heart', Casamiento: 'ring', 'Fecha del año': 'calendar', Otra: 'star' };
+const spIc = sp => (SP_ICON.find(([re]) => re.test(sp.name)) || [])[1] || KIND_ICON[sp.kind] || 'heart';
+const SP_GRAD = 'linear-gradient(160deg,#d6a4ff,#9b51e0)';
+const spIcon = (sp, cls = '') => `<div class="avatar glyph ${cls}" style="background:${SP_GRAD}">${ic(spIc(sp), '', 2)}</div>`;
+// Fondo del banner y del widget: el mismo ícono repetido, en línea blanca
 function spPattern(sp) {
-  const e = spEmoji(sp), pts = [[12, 16, -15], [58, 10, 10], [102, 20, 20], [34, 50, 0], [82, 56, -20], [12, 84, 15], [60, 88, -10], [108, 80, 5]];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="96">${pts.map(([x, y, r]) => `<text x="${x}" y="${y}" font-size="13" text-anchor="middle" dominant-baseline="central" transform="rotate(${r} ${x} ${y})">${e}</text>`).join('')}</svg>`;
+  const pts = [[12, 16, -15], [58, 10, 10], [102, 20, 20], [34, 50, 0], [82, 56, -20], [12, 84, 15], [60, 88, -10], [108, 80, 5]];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="96" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${pts.map(([x, y, r]) => `<g transform="translate(${x - 7} ${y - 7}) rotate(${r} 7 7) scale(.58)">${P[spIc(sp)]}</g>`).join('')}</svg>`;
   return `<div class="hearts" style="background-image:url('data:image/svg+xml,${encodeURIComponent(svg)}')"></div>`;
 }
 function personRow(p) {
@@ -276,7 +281,7 @@ function screenList() {
       const spToday = S.listMode === 'birthdays' || q ? [] : specials.filter(sp => daysLeft(sp.m, sp.d) === 0);
       if (spToday.length) {
         const sp = spToday[0], yrs = sp.y ? TODAY.getFullYear() - sp.y : null;
-        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}">${spPattern(sp)}<div class="avatar">${spEmoji(sp)}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
+        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}">${spPattern(sp)}<div class="avatar glyph">${ic(spIc(sp), '', 2)}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
       }
       if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
       if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
@@ -314,7 +319,7 @@ function calendarBody() {
   for (let d = 1; d <= days; d++) {
     const items = byDay[d] || [], wknd = (lead + d - 1) % 7 >= 5;
     const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.some(it => it.p) ? 'has' : items.length ? 'has-sp' : ''].join(' ');
-    const shape = items.some(it => it.p) ? CAL_CAKE : items.length ? `<span class="cal-emo">${spEmoji(items[0].sp)}</span>` : '';
+    const shape = items.some(it => it.p) ? CAL_CAKE : items.length ? `<span class="cal-emo">${ic(spIc(items[0].sp), '', 2.2)}</span>` : '';
     cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}">${shape}<span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}</button>`;
   }
   const total = Object.values(byDay).flat().filter(it => it.p).length;
@@ -385,7 +390,7 @@ const beforeLabel = n => n === 0 ? 'Solo el mismo día' : n === 1 ? '1 día ante
 function screenSpecial(id) {
   const sp = S.specials.find(s => s.id === id);
   const n = daysLeft(sp.m, sp.d);
-  let h = `<div class="detail-head"><div class="avatar lg" style="background:linear-gradient(160deg,#d6a4ff,#9b51e0);font-size:44px">${spEmoji(sp)}</div><h2>${esc(sp.name)}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(sp.kind)}</div></div>`;
+  let h = `<div class="detail-head">${spIcon(sp, 'lg')}<h2>${esc(sp.name)}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(sp.kind)}</div></div>`;
   h += `<div class="stats"><div class="stat"><div class="n">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 1 ? 'día' : 'días'}</div></div>${sp.y ? `<div class="stat"><div class="n">${nextDate(sp.m, sp.d).getFullYear() - sp.y}</div><div class="l">años</div></div>` : ''}</div>`;
   h += section(navRow({ icon: 'calendar', color: '#af52de', title: 'Cuándo es', value: monthDay(sp.m, sp.d), a: 'editSpecial', extra: `data-id="${sp.id}"` }), { header: 'Fecha' });
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: `${beforeLabel(S.rem.before)} (general)`, a: 'fake', extra: 'data-msg="Mismo selector que en cada persona"' }), { header: 'Recordatorio' });
@@ -510,7 +515,7 @@ function widgetPhoto() {
 function widgetSpecial() {
   const sp = [...S.specials].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).find(s => s.kind !== 'Fecha del año') || S.specials[0]; if (!sp) return '';
   const n = daysLeft(sp.m, sp.d), [a, u] = countParts(n);
-  return `<div class="widget sm w-special">${spPattern(sp)}<div class="w-emoji">${spEmoji(sp)}</div>
+  return `<div class="widget sm w-special">${spPattern(sp)}<div class="w-emoji">${ic(spIc(sp), '', 2.2)}</div>
     <div class="w-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
     <div><div class="w-name clamp">${esc(sp.name)}</div><div class="w-sub">${esc(sp.kind)}</div></div></div>`;
 }

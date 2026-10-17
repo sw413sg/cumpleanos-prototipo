@@ -186,6 +186,10 @@ function navRow({ icon, color, title, value = '', a, extra = '', badge = '', sub
 }
 function countdown(n) {
   if (n === 0) return `<div class="countdown today">Hoy</div>`;
+  // Desde 2 meses completos, se muestra en meses: "+2 meses", "+3 meses"…
+  const t = new Date(TODAY); t.setDate(t.getDate() + n);
+  const months = (t.getFullYear() - TODAY.getFullYear()) * 12 + t.getMonth() - TODAY.getMonth() - (t.getDate() < TODAY.getDate() ? 1 : 0);
+  if (months >= 2) return `<div class="countdown"><div class="n">+${months}</div><div class="u">meses</div></div>`;
   return `<div class="countdown"><div class="n">${n}</div><div class="u">${n === 1 ? 'día' : 'días'}</div></div>`;
 }
 // Ícono de la fila en la lista: círculo con torta (cumpleaños) o corazón (fecha especial)

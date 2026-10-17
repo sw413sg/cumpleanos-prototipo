@@ -87,8 +87,6 @@ const ic = (n, cls = '', sw = 1.8) => `<svg class="${cls}" viewBox="0 0 24 24" f
 // Ícono de la app (Calendario A): hoja blanca, encabezado rojo y corazón rojo
 const HEART = 'M50 84C50 84 16 63 16 39C16 27.5 24.5 20 34.5 20C41.5 20 47 24 50 30C53 24 58.5 20 65.5 20C75.5 20 84 27.5 84 39C84 63 50 84 50 84Z';
 const appIcon = () => `<svg class="app-icon" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="aiR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a85"/><stop offset=".5" stop-color="#e23d4a"/><stop offset="1" stop-color="#a8174b"/></linearGradient></defs><rect width="100" height="100" rx="22.5" fill="#fff"/><path d="M0 22.5A22.5 22.5 0 0 1 22.5 0H77.5A22.5 22.5 0 0 1 100 22.5V31H0Z" fill="url(#aiR)"/><circle cx="31" cy="15.5" r="4" fill="#fff"/><circle cx="69" cy="15.5" r="4" fill="#fff"/><path d="${HEART}" fill="#e23d4a" transform="translate(50 66) scale(.56) translate(-50 -52)"/></svg>`;
-// Título "Unf♥rgettables": el corazón hace de "o"
-const titleHeart = `Unf<svg class="title-heart" viewBox="16 20 68 64" aria-hidden="true"><path d="${HEART}"/></svg>rgettables`;
 const chev = () => `<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L6.5 7l-5 5.5"/></svg>`;
 const backChev = () => `<svg viewBox="0 0 13 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2.5 10.5 11 19"/></svg>`;
 const NO_ADS = { t: 'Sin publicidad', s: 'Hacemos un esfuerzo extra en mantener la app libre de ads' };
@@ -289,7 +287,7 @@ function screenList() {
       }
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="go" data-s="gifts" aria-label="Regalos">${ic('gift', '', 2)}</button><button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title" aria-label="Unforgettables">${titleHeart}</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="go" data-s="gifts" aria-label="Regalos">${ic('gift', '', 2)}</button><button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
 }
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
@@ -474,7 +472,7 @@ function upcoming(k, withSpecials = true) {
 const wCircle = it => it.p ? cakeIcon(it.p) : spIcon(it.sp);
 const wName = it => esc(it.p ? it.p.name : it.sp.name);
 const wWhen = n => { if (n === 0) return `<span class="w-hoy">Hoy</span>`; if (n === 1) return 'Mañana'; const [a, u] = countParts(n); return `<b>${a}</b> ${u}`; };
-const wBrand = () => `<div class="w-brand">${titleHeart}</div>`;
+const wBrand = () => `<div class="w-brand">Unforgettables</div>`;
 // Chico (gratis): el próximo cumple. El día del cumple se pone rojo con confeti.
 function widgetSmall() {
   const it = upcoming(1, false)[0]; if (!it) return '';

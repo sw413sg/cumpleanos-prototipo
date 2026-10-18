@@ -657,7 +657,9 @@ function screenWidgets() {
       'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
     h += `<div class="wk-sec">Fechas fijadas ${S.unlocked ? `<span class="wk-count">${S.pins.filter(pinEv).length} de ${S.pinMax}</span>` : tag()}</div>`;
     // Si la persona o la fecha ya no está (se borró, o datos guardados de antes), no se muestra
-    h += S.pins.filter(pinEv).map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. Tocá para cambiarlo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
+    // La X de la esquina la saca de Widgets sin abrir la hoja
+    const unpinX = pin => S.unlocked ? `<span class="wk-x" data-a="pinUnpin" data-k="${pin.k}" data-id="${pin.id}" aria-label="Quitar de Widgets"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></span>` : '';
+    h += S.pins.filter(pinEv).map(pin => card(unpinX(pin) + pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. Tocá para cambiarlo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
     h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.</div></div>`;
     h += `<div class="wk-sec">Listas y calendario ${tag()}</div>`;
     h += Object.keys(W_KINDS).map(w => { const c = wCfg(w), [t, sub] = W_KINDS[w]; return card(W_RENDER[w](c), t, S.unlocked ? `${sub.split('.')[0]} · ${wDesignName(w, c)}. Tocá para cambiarlo.` : sub, '', S.unlocked ? `data-a="wOpen" data-w="${w}"` : `data-a="paywall" data-f="${w === 'cal' ? 'cal' : 'theme'}"`); }).join('');
@@ -1005,6 +1007,7 @@ const A = {
     if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
   pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }; S.dialog = null; persist(); dismiss(); toast(`Reemplazaste a ${old}`); },
   pinMax(d) { S.pinMax = +d.v; persist(); render(); },
+  pinUnpin(d) { const ev = pinEv(S.pins.find(x => x.k === d.k && x.id === d.id)); S.pins = S.pins.filter(x => !(x.k === d.k && x.id === d.id)); persist(); toast(`${ev ? ev.name : "La fecha"} ya no está en Widgets`, '🗑️'); },
   pinRemove() { const o = topOverlay(); S.pins = S.pins.filter(x => !(x.k === o.k && x.id === o.id)); persist(); dismiss(); toast('Lo sacaste de Widgets', '🗑️'); },
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },

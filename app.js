@@ -852,16 +852,24 @@ function sheetAddSpecial(o) {
     `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
 }
 
-const FEATURES = {
-  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Próximos, lista completa y calendario, con varios diseños y diez colores', ['widgetsTab', 'theme']], ['clock', '#ff3b30', 'Cualquier fecha en un widget', 'Cuenta regresiva hasta los segundos, en más de 15 diseños', ['pin']], ['calendar', '#ff2d55', 'Calendario', 'El mes o el año entero, con los cumples y las fechas marcados', ['cal']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
-  extras: [['heart', '#af52de', 'Fechas especiales', 'Aniversarios, Día de la Madre y más', ['specials']], ['noAds', '#34c759', NO_ADS.t, NO_ADS.s, []], ['bulb', '#ff9500', 'Sugerencias de regalo', 'Según los gustos de cada uno', ['ideas']], ['share', '#34c759', 'Guardar ideas desde Compartir', 'Desde Safari, Mercado Libre o cualquier app', ['ideas']], ['globe', '#007aff', 'Aviso a la hora de su país', 'Para los que viven lejos', ['tz']], ['people', '#30b0c7', 'Compartir con pareja o familia', 'Una lista para todos', ['share']], ['briefcase', '#8e8e93', 'Modo trabajo', 'Contactos laborales con notas', ['work']]],
-};
+// Ordenadas de la más importante a la menos
+const FEATURES = [
+  ['heart', '#af52de', 'Fechas especiales', 'Casamientos, aniversarios, Día de la Madre y más', ['specials']],
+  ['noAds', '#34c759', NO_ADS.t, NO_ADS.s, []],
+  ['paint', '#ff9500', 'Widgets a tu gusto', 'Próximos, lista completa y calendario, con varios diseños y diez colores', ['widgetsTab', 'theme', 'cal']],
+  ['clock', '#ff3b30', 'Cualquier fecha en un widget', 'Cuenta regresiva hasta los segundos, en más de 15 diseños', ['pin']],
+  ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']],
+  ['bulb', '#ff9500', 'Ideas y sugerencias de regalo', 'En la ficha de cada uno, según sus gustos', ['ideas']],
+  ['share', '#34c759', 'Guardar ideas desde Compartir', 'Desde Safari, Mercado Libre o cualquier app', []],
+  ['globe', '#007aff', 'Aviso a la hora de su país', 'Para los que viven lejos', ['tz']],
+  ['people', '#30b0c7', 'Compartir con pareja o familia', 'Una lista para todos', ['share']],
+  ['briefcase', '#8e8e93', 'Modo trabajo', 'Contactos laborales con notas', ['work']],
+];
 const FEATURE_NAMES = { pin: 'Mostrar una fecha en un widget', specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Elegir el diseño y el color', cal: 'El widget calendario', lock: 'El widget de bloqueo' };
 function sheetPaywall(o) {
   const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`).join('');
   const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.</p>
-    <div class="pw-group-title">Extras</div>${f(FEATURES.extras)}<div class="pw-group-title">Widgets</div>${f(FEATURES.widgets)}
-    <div class="pw-group-title">Siempre gratis</div><div class="s muted small" style="line-height:1.45;padding-bottom:10px">Cumpleaños y edades, importar desde Contactos, recordatorios con aviso anticipado, cumples redondos, historial de regalos, gustos y el widget básico.</div></div>`;
+    <div style="margin-top:18px;padding-bottom:10px">${f(FEATURES)}</div></div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss" aria-label="Cerrar" style="color:var(--label2)"><svg viewBox="0 0 24 24" style="width:30px;height:30px"><circle cx="12" cy="12" r="11" fill="var(--fill)"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` }) +
     `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">Desbloquear por USD 4,99</button><div class="fine">Pago único · Sin publicidad · Se cobra a tu Apple ID · Vale en todos tus dispositivos</div>${o.soft ? '<button class="btn-plain" data-a="dismiss">Ahora no</button>' : ''}<div class="links"><button data-a="restore">Restaurar compra</button><button data-a="fake" data-msg="Abriría los Términos">Términos</button><button data-a="fake" data-msg="Abriría la Privacidad">Privacidad</button></div></div></div>`);
 }

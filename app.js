@@ -302,7 +302,7 @@ function screenList() {
       }
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ left: `<button class="navbtn" data-a="import">Importar</button>`, right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
 }
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)

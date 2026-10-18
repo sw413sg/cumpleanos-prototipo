@@ -174,6 +174,7 @@ const S = {
   work: saved.work || { on: true, section: true },
   widgetTheme: saved.widgetTheme || 'classic', widgetTone: saved.widgetTone || 'grad',
   pins: saved.pins || [{ k: 'sp', id: 'casa', style: 'secs' }, { k: 'p', id: 'nelly', style: 'bar', color: 'teal', tone: 'soft' }],
+  pinMax: saved.pinMax || 5,
   tab: 'list',
   stacks: { list: [{ s: 'list' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
@@ -182,7 +183,7 @@ const S = {
   pushed: false,
 };
 function persist() {
-  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, pins: S.pins, listView: S.listView }));
+  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, pins: S.pins, pinMax: S.pinMax, listView: S.listView }));
 }
 const person = id => S.people.find(p => p.id === id);
 const gradFor = id => GRADS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
@@ -610,7 +611,7 @@ function screenWidgets() {
     h += `<div class="wk-list">`;
     h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', 'Mensajes')}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', 'Fotos')}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', 'Teléfono')}</div></div>`,
       'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
-    h += `<div class="wk-sec">Fechas fijadas ${tag()}</div>`;
+    h += `<div class="wk-sec">Fechas fijadas ${S.unlocked ? `<span class="wk-count">${S.pins.filter(pinEv).length} de ${S.pinMax}</span>` : tag()}</div>`;
     // Si la persona o la fecha ya no está (se borró, o datos guardados de antes), no se muestra
     h += S.pins.filter(pinEv).map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. Tocá para cambiarlo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
     h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.</div></div>`;
@@ -637,7 +638,7 @@ function screenSettings() {
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Recordatorios', value: S.rem.on ? `${S.rem.time} · ${S.rem.before ? S.rem.before + 'd antes' : 'mismo día'}` : 'Apagados', a: 'go', extra: 'data-s="reminders"' }) +
     navRow({ icon: 'download', color: '#34c759', title: 'Importar desde Contactos', a: 'import' }), { header: 'Avisos y datos' });
   const ex = (icon, color, title, s) => S.unlocked ? navRow({ icon, color, title, a: 'go', extra: `data-s="${s}"` }) : `<button class="row has-icon" data-a="paywall" data-f="${s}"><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><span class="grow">${title}</span>${lockBadge()}</button>`;
-  h += section(ex('heart', '#af52de', 'Fechas especiales', 'specials') + ex('people', '#007aff', 'Compartir lista con pareja o familia', 'share') + ex('briefcase', '#5856d6', 'Modo trabajo', 'work') + ex('widgets', '#ff9500', 'Personalizar widgets', 'widgetsTab'), { header: 'Extras' });
+  h += section(ex('heart', '#af52de', 'Fechas especiales', 'specials') + ex('people', '#007aff', 'Compartir lista con pareja o familia', 'share') + ex('briefcase', '#5856d6', 'Modo trabajo', 'work') + ex('widgets', '#ff9500', 'Personalizar widgets', 'widgetsTab') + (S.unlocked ? navRow({ icon: 'clock', color: '#ff3b30', title: 'Máximo de fechas fijadas', value: String(S.pinMax), a: 'go', extra: 'data-s="pinMax"' }) : ''), { header: 'Extras' });
   h += section(navRow({ icon: 'moon', color: '#1c1c1e', title: 'Apariencia', value: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' }[S.theme], a: 'go', extra: 'data-s="appearance"' }) +
     navRow({ icon: 'info', color: '#8e8e93', title: 'Ver bienvenida otra vez', a: 'onboarding' }), { header: 'General' });
   h += section(`<button class="row accent" data-a="restore">Restaurar compra</button>`, { footer: 'Si ya pagaste en otro iPhone con el mismo Apple ID, tocá Restaurar.' });
@@ -659,6 +660,9 @@ function screenReminders() {
     h += section(`<div class="row"><span class="grow">Avisar a la hora del país de cada persona</span>${S.unlocked ? toggle(r.localTz, 'remToggle', 'data-k="localTz"') : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>`, { header: 'Personas en otro país', footer: 'Si alguien vive en otro huso horario, el aviso del día te llega cuando allá ya es su cumple.' });
   }
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Recordatorios', blur: true })}<div class="scroll" data-key="rem-scroll">${h}</div></div>`;
+}
+function screenPinMax() {
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Fechas fijadas', blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([[3, '3'], [4, '4'], [5, '5'], [6, '6'], [8, '8'], [10, '10']], S.pinMax, 'pinMax'), { header: 'Máximo en Widgets', footer: 'Así la pestaña Widgets no se llena. Cuando llegás al máximo, te preguntamos cuál reemplazar.' })}</div></div>`;
 }
 function screenAppearance() {
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Apariencia', blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([['system', 'Igual que el sistema'], ['light', 'Claro'], ['dark', 'Oscuro']], S.theme, 'theme'))}</div></div>`;
@@ -841,12 +845,12 @@ const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetF
 
 function dialogHtml(d) {
   if (d.type === 'alert') return `<div class="alert-wrap"><div class="alert ${d.fresh ? 'anim' : ''}"><div class="body"><div class="t">${d.title}</div><div class="m">${d.msg}</div></div><div class="btns">${d.buttons.map(b => `<button data-a="${b.a}">${b.label}</button>`).join('')}</div></div></div>`;
-  return `<div class="dim" data-a="dialogCancel" style="z-index:79"></div><div class="action-sheet ${d.fresh ? 'anim' : ''}"><div class="group"><div class="msg">${d.title}</div>${d.actions.map(x => `<button class="${x.destructive ? 'destructive' : ''}" data-a="${x.a}">${x.label}</button>`).join('')}</div><button class="cancel" data-a="dialogCancel">Cancelar</button></div>`;
+  return `<div class="dim" data-a="dialogCancel" style="z-index:79"></div><div class="action-sheet ${d.fresh ? 'anim' : ''}"><div class="group"><div class="msg">${d.title}</div>${d.actions.map(x => `<button class="${x.destructive ? 'destructive' : ''}" data-a="${x.a}" ${x.extra || ''}>${x.label}</button>`).join('')}</div><button class="cancel" data-a="dialogCancel">Cancelar</button></div>`;
 }
 
 /* ---------------- Render ---------------- */
 const phone = document.getElementById('phone');
-const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, specials: screenSpecials, share: screenShare, work: screenWork };
+const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, pinMax: screenPinMax, specials: screenSpecials, share: screenShare, work: screenWork };
 const TABS = [['list', 'Unforgettables', 'heart'], ['widgets', 'Widgets', 'widgets'], ['settings', 'Ajustes', 'gear']];
 const statusbar = `<div class="statusbar"><span>9:41</span><span class="icons"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.1-1.2A10 10 0 008 .8 10 10 0 00.9 3.7L2 4.9a8.4 8.4 0 016-2.4zm0 3.4c1.4 0 2.6.5 3.6 1.4l1.1-1.2A7 7 0 008 4.2a7 7 0 00-4.7 1.9l1.1 1.2c1-.9 2.2-1.4 3.6-1.4zm0 3.3c.6 0 1.1.2 1.5.6L8 11.4 6.5 9.8c.4-.4.9-.6 1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2.5" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div>`;
 
@@ -948,7 +952,17 @@ const A = {
   pinDesign(d) { topOverlay().design = d.v; render(); },
   pinColor(d) { topOverlay().color = d.v; render(); },
   pinColorTone(d) { topOverlay().tone = d.v; render(); },
-  pinSave() { const o = topOverlay(), cur = S.pins.find(x => x.k === o.k && x.id === o.id); if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
+  pinSave() {
+    const o = topOverlay(), cur = S.pins.find(x => x.k === o.k && x.id === o.id);
+    S.pins = S.pins.filter(pinEv);
+    // Llegó al máximo: preguntar cuál reemplazar en vez de sumar otra
+    if (!cur && S.pins.length >= S.pinMax) {
+      S.dialog = { type: 'confirm', title: `<b>Llegaste al máximo de ${S.pinMax} fechas fijadas</b><br>¿Cuál querés reemplazar? Podés subir el máximo en Ajustes.`, actions: S.pins.map((x, i) => ({ label: `${esc(pinEv(x).name)} · ${pinStyleName(x.style)}`, a: 'pinReplace', extra: `data-i="${i}"` })), fresh: true };
+      return render();
+    }
+    if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
+  pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }; S.dialog = null; persist(); dismiss(); toast(`Reemplazaste a ${old}`); },
+  pinMax(d) { S.pinMax = +d.v; persist(); render(); },
   pinRemove() { const o = topOverlay(); S.pins = S.pins.filter(x => !(x.k === o.k && x.id === o.id)); persist(); dismiss(); toast('Lo sacaste de Widgets', '🗑️'); },
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },

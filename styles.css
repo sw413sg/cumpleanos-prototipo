@@ -695,3 +695,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .widget.t-color .w-ymini .cu { background: #fff; }
 .widget.t-color .w-ymini .sp { background: rgba(255,255,255,.6); }
 .w-ymini .hoy { box-shadow: 0 0 0 1.5px var(--label); }
+/* X para sacar una fecha fijada desde su tarjeta */
+.wk-stage { position: relative; }
+.wk-x { position: absolute; top: 8px; right: 8px; z-index: 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(60,60,67,.18); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--label); }
+.wk-x svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }

@@ -173,7 +173,9 @@ const S = {
   rem: saved.rem || { on: true, time: '09:00', before: 3, sameDay: true, round: true, roundBefore: 30, localTz: false },
   work: saved.work || { on: true, section: true },
   widgetTheme: saved.widgetTheme || 'classic', widgetTone: saved.widgetTone || 'grad',
+  wcfg: saved.wcfg || {},
   pins: saved.pins || [{ k: 'sp', id: 'casa', style: 'secs' }, { k: 'p', id: 'nelly', style: 'bar', color: 'teal', tone: 'soft' }],
+  pinMax: saved.pinMax || 5,
   tab: 'list',
   stacks: { list: [{ s: 'list' }], widgets: [{ s: 'widgets' }], settings: [{ s: 'settings' }] },
   overlays: [], dialog: null, toast: null,
@@ -182,7 +184,7 @@ const S = {
   pushed: false,
 };
 function persist() {
-  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, pins: S.pins, listView: S.listView }));
+  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, wcfg: S.wcfg, pins: S.pins, pinMax: S.pinMax, listView: S.listView }));
 }
 const person = id => S.people.find(p => p.id === id);
 const gradFor = id => GRADS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
@@ -438,14 +440,13 @@ function similar(a, b) {
 const THEMES = [['classic', 'Automático', null], ['red', 'Rojo', ['#ff5f6d', '#e23d4a', '#b31b55']], ['pink', 'Rosa', ['#ff8fb8', '#f0508a', '#c2276a']], ['orange', 'Naranja', ['#ffb35c', '#ff8a2f', '#e0571a']], ['gold', 'Dorado', ['#f7cf5b', '#e9a825', '#c27c0e']],
   ['green', 'Verde', ['#6be3a0', '#26b26f', '#147a52']], ['teal', 'Celeste', ['#6fdcf0', '#22a7d6', '#1872b8']], ['blue', 'Azul', ['#8aa6ff', '#4f6bff', '#2f3fc4']], ['purple', 'Violeta', ['#c86dd7', '#af52de', '#7b2fbf']], ['night', 'Noche', ['#3a2440', '#2a1a2e', '#15151b']]];
 const themeOk = k => THEMES.some(t => t[0] === k);
-const wTheme = () => themeOk(S.widgetTheme) ? S.widgetTheme : 'classic';
 const tGrad = c => `linear-gradient(135deg,${c[0]},${c[1]} 55%,${c[2]})`;
 const swatchBg = (k, c) => c ? tGrad(c) : 'linear-gradient(135deg,#fff 50%,#1c1c1e 50%)';
 // Clase y estilo del widget para un color y un fondo (degradé o suave). "classic" no cambia nada.
 function tAttrs(k, tone) {
   const c = (THEMES.find(t => t[0] === k) || [])[2]; if (!c) return { cls: '', style: '' };
   if (tone === 'soft') return { cls: 't-soft', style: `--accent:${c[1]};--purple:${c[1]};background:color-mix(in srgb, ${c[1]} 13%, var(--cell))` };
-  return { cls: 't-color', style: `background:${tGrad(c)}` };
+  return { cls: 't-color', style: `--wcol:${c[1]};background:${tGrad(c)}` };
 }
 // Selector de color y de fondo (pestaña Widgets y hoja "Mostrar en un widget")
 function colorPicker(cur, tone, a, autoName = 'Automático', autoColor = null) {
@@ -473,10 +474,70 @@ function widgetSmall() {
     <div><div class="w-name">${esc(p.name)}</div><div class="w-sub">${n === 0 ? (age ? `Cumple ${age} 🎉` : '¡Feliz cumple! 🎉') : `${monthDay(p.m, p.d)}${age ? ` · ${age}` : ''}`}</div></div></div>`;
 }
 const wRow = it => `<div class="w-row">${wCircle(it)}<div class="grow"><div class="w-rname">${wName(it)}</div><div class="w-sub">${it.p ? (turningAge(it.p) ? `Cumple ${turningAge(it.p)}` : monthDay(it.p.m, it.p.d)) : esc(it.sp.kind)}</div></div><div class="w-when">${wWhen(it.n)}</div></div>`;
-// Mediano: los próximos tres, como la lista del inicio
-const widgetMedium = th => { const t = tAttrs(th, S.widgetTone); return `<div class="widget md ${t.cls}" style="${t.style}">${wBrand()}${upcoming(3).map(wRow).join('')}</div>`; };
-// Grande: la lista más completa, con los próximos siete
-const widgetLarge = th => { const t = tAttrs(th, S.widgetTone); return `<div class="widget lg ${t.cls}" style="${t.style}"><div class="w-lghead"><span class="w-month">Próximos</span>${wBrand()}</div>${upcoming(7).map(wRow).join('')}</div>`; };
+// Mediano, grande y calendario: cada uno con su diseño y su color (Unlock), se cambian tocándolos en Widgets
+const W_KINDS = {
+  next: ['Próximos', 'Mediano. Los tres que vienen, con cumples y fechas.', [['list', 'Lista'], ['cards', 'Tarjetas'], ['first', 'Destacado'], ['line', 'Línea de tiempo']]],
+  list: ['Lista completa', 'Grande. Todo lo que viene.', [['list', 'Lista'], ['months', 'Por mes'], ['compact', 'Compacta'], ['grid', 'Grilla']]],
+  cal: ['Calendario', 'Grande. El mes con los cumples y las fechas marcados.', [['list', 'Con próximos'], ['month', 'Mes grande'], ['icons', 'Íconos'], ['blocks', 'Bloques'], ['year', 'Año entero']]],
+};
+// Sin elegir todavía: el primer diseño y el color que tenían antes los widgets
+function wCfg(w, o = S.wcfg[w] || {}) {
+  const ds = W_KINDS[w][2];
+  return { design: ds.some(d => d[0] === o.design) ? o.design : ds[0][0], color: themeOk(o.color) ? o.color : themeOk(S.widgetTheme) ? S.widgetTheme : 'classic', tone: o.tone || S.widgetTone || 'grad' };
+}
+const wDesignName = (w, c) => W_KINDS[w][2].find(d => d[0] === c.design)[1];
+const wFirst = it => it.p ? esc(it.p.name.split(' ')[0]) : esc(it.sp.name);
+const wUnit = n => n === 0 ? '<b>Hoy</b>' : n === 1 ? '<b>Mañana</b>' : (([a, u]) => `<b>${a}</b><span>${u}</span>`)(countParts(n));
+function widgetNext(c) {
+  const t = tAttrs(c.color, c.tone), its = upcoming(3);
+  let body;
+  if (c.design === 'cards') body = `${wBrand()}<div class="w-cards">${its.map(it => `<div>${wCircle(it)}<div class="w-cnum">${wUnit(it.n)}</div><div class="w-cname">${wFirst(it)}</div></div>`).join('')}</div>`;
+  else if (c.design === 'first') { const [a, ...rest] = its; body = `<div class="w-first"><div class="w-firstbig">${wCircle(a)}<div class="w-count">${a.n === 0 ? '<span class="big">Hoy</span>' : (([x, u]) => `<span class="big">${x}</span><span class="u">${u}</span>`)(countParts(a.n))}</div><div class="w-name">${wName(a)}</div></div><div class="w-firstrest">${wBrand()}${rest.map(it => `<div><div class="w-rname">${wName(it)}</div><div class="w-sub">${wWhen(it.n).replace(/<\/?b>/g, '')}</div></div>`).join('')}</div></div>`; }
+  else if (c.design === 'line') body = `${wBrand()}<div class="w-line">${its.map(it => `<div><div class="w-cnum">${wUnit(it.n)}</div><span class="dot ${it.p ? '' : 'sp'}"></span><div class="w-cname">${wFirst(it)}</div></div>`).join('')}</div>`;
+  else body = `${wBrand()}${its.map(wRow).join('')}`;
+  return `<div class="widget md wd-${c.design} ${t.cls}" style="${t.style}">${body}</div>`;
+}
+const MON3 = m => cap(MONTHS[m - 1].slice(0, 3));
+function widgetList(c) {
+  const t = tAttrs(c.color, c.tone);
+  const head = (title = 'Próximos') => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
+  let body;
+  if (c.design === 'months') {
+    let last = 0; body = head() + upcoming(6).map(it => { const x = it.p || it.sp, mh = x.m !== last ? `<div class="w-mhead">${cap(MONTHS[x.m - 1])}</div>` : ''; last = x.m; return mh + wRow(it); }).join('');
+  } else if (c.design === 'compact') body = head() + upcoming(11).map(it => { const x = it.p || it.sp; return `<div class="w-crow"><span class="w-cdate">${x.d} ${MON3(x.m)}</span><span class="dot ${it.p ? '' : 'sp'}"></span><span class="grow">${wName(it)}</span><span class="w-when">${wWhen(it.n)}</span></div>`; }).join('');
+  else if (c.design === 'grid') body = head() + `<div class="w-grid">${upcoming(6).map(it => `<div>${wCircle(it)}<div class="w-cnum">${wUnit(it.n)}</div><div class="w-cname">${wName(it)}</div></div>`).join('')}</div>`;
+  else body = head() + upcoming(7).map(wRow).join('');
+  return `<div class="widget lg wd-${c.design} ${t.cls}" style="${t.style}">${body}</div>`;
+}
+// Qué hay ese día: 'cu' (cumple), 'sp' (fecha especial) o ''
+const calMark = (y, m, d) => S.people.some(p => { const [om, od] = observed(p.m, p.d, y); return om === m && od === d; }) ? 'cu' : S.specials.some(s => s.m === m && s.d === d) ? 'sp' : '';
+function monthCells(y, m, cell) {
+  const first = (new Date(y, m - 1, 1).getDay() + 6) % 7, days = new Date(y, m, 0).getDate();
+  let h = '<span></span>'.repeat(first);
+  for (let d = 1; d <= days; d++) h += cell(d, calMark(y, m, d), y === TODAY.getFullYear() && m === TODAY.getMonth() + 1 && d === TODAY.getDate());
+  return h;
+}
+function widgetCal(c) {
+  const t = tAttrs(c.color, c.tone), y = TODAY.getFullYear(), m = TODAY.getMonth() + 1;
+  const wk = `${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<i>${x}</i>`).join('')}`;
+  const head = title => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
+  const num = (d, k, hoy) => `<span class="${k}${hoy ? ' hoy' : ''}">${d}</span>`;
+  let body;
+  if (c.design === 'year') body = head(String(y)) + `<div class="w-year">${MONTHS.map((_, i) => `<div class="${i + 1 === m ? 'cur' : ''}"><b>${MON3(i + 1)}</b><div class="w-ymini">${monthCells(y, i + 1, (d, k, hoy) => `<span class="${k}${hoy ? ' hoy' : ''}"></span>`)}</div></div>`).join('')}</div>`;
+  else if (c.design === 'icons') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, (d, k, hoy) => k ? `<span class="ic-${k}${hoy ? ' hoy' : ''}">${ic(k === 'cu' ? 'cake' : 'heart', '', 2.2)}</span>` : num(d, '', hoy))}</div>`;
+  else if (c.design === 'blocks') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-blocks">${wk}${monthCells(y, m, num)}</div>`;
+  else if (c.design === 'month') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, num)}</div>`;
+  else body = head(cap(MONTHS[m - 1])) + `<div class="w-cal">${wk}${monthCells(y, m, num)}</div><div class="w-sep"></div>${upcoming(3).map(wRow).join('')}`;
+  return `<div class="widget lg w-calw wd-${c.design} ${t.cls}" style="${t.style}">${body}</div>`;
+}
+const W_RENDER = { next: widgetNext, list: widgetList, cal: widgetCal };
+function sheetWidget(o) {
+  const c = wCfg(o.w, o), [title] = W_KINDS[o.w];
+  const designs = `<div class="wk-color pin-color"><div class="wk-colhead"><span>Diseño</span></div><div class="pin-designs">${W_KINDS[o.w][2].map(([k, t]) => `<button class="${c.design === k ? 'sel' : ''}" data-a="wDesign" data-v="${k}">${t}</button>`).join('')}</div></div>`;
+  const h = `<div class="pin-prev"><div class="wk-stage">${W_RENDER[o.w](c)}</div></div>${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(c.color, c.tone, 'wColor')}</div>` +
+    `<div class="section-footer" style="margin:-20px 16px 24px">Para verlo en tu inicio, agregá el widget <b>${title}</b> de Unforgettables.</div>`;
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title, right: `<button class="navbtn bold" data-a="wSave">Listo</button>` }) + `<div class="scroll">${h}</div>`);
+}
 // Fecha fijada: cualquier cumple o fecha especial, en un widget con el estilo de cuenta que elijas (Unlock)
 const PIN_STYLES = [['days', 'Días', 'Cuántos días faltan', 'hourglass'], ['secs', 'Con segundos', 'Días, horas, minutos y segundos', 'clock'], ['weeks', 'Semanas', 'Semanas y días', 'calendar'], ['bar', 'Barra', 'Cuánto falta del año', 'listBullet']];
 const pinStyleName = st => (PIN_STYLES.find(x => x[0] === st) || PIN_STYLES[0])[1];
@@ -572,21 +633,6 @@ function sheetPin(o) {
     `<div class="section-footer" style="margin:-20px 16px 24px">Queda en la pestaña Widgets. Para verlo en tu inicio, agregá el widget <b>Fecha fijada</b> de Unforgettables y elegí ${esc(ev.p ? ev.name.split(' ')[0] : ev.name)}.</div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Mostrar en un widget', right: `<button class="navbtn bold" data-a="pinSave">${pinned ? 'Listo' : 'Agregar'}</button>` }) + `<div class="scroll">${h}</div>`);
 }
-// Chico con foto: la cara de quien cumple
-function widgetPhoto() {
-  const p = S.people.find(x => x.photo) || S.people[0]; if (!p) return '';
-  const n = daysLeft(p.m, p.d), [a, u] = countParts(n);
-  return `<div class="widget sm w-photo" style="background-image:${photoBg(p)}">${n === 0 ? '<div class="confetti"></div>' : ''}<div class="w-pill">${ic('cake', '', 2.2)}${n === 0 ? 'Cumple hoy' : 'Faltan'}</div>
-    <div>${n === 0 ? '' : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`}<div class="w-name ${n === 0 ? 'xl' : ''}">${esc(p.name.split(' ')[0])}</div></div></div>`;
-}
-// Chico de fecha especial: violeta con corazones
-function widgetSpecial() {
-  const sp = [...S.specials].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).find(s => s.kind !== 'Fecha del año') || S.specials[0]; if (!sp) return '';
-  const n = daysLeft(sp.m, sp.d), [a, u] = countParts(n);
-  return `<div class="widget sm w-special">${spPattern(sp)}<div class="w-emoji">${ic(spIc(sp), '', 2.2)}</div>
-    <div class="w-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
-    <div><div class="w-name clamp">${esc(sp.name)}</div><div class="w-sub">${esc(sp.kind)}</div></div></div>`;
-}
 // Pantalla de bloqueo: en línea, circular y rectangular (monocromo, como en iOS)
 function lockScreen() {
   const [a, b] = upcoming(2, false);
@@ -604,20 +650,17 @@ function screenWidgets() {
   const tap = f => S.unlocked ? `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"` : `data-a="paywall" data-f="${f}"`;
   const card = (stage, t, s, right, attrs = '') => `<button class="wk" ${attrs}><div class="wk-stage">${stage}</div><div class="wk-info"><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div>${right}</div></button>`;
   const steps = arr => `<div class="wk-how"><div class="t">Cómo agregarlos</div>${arr.map((x, i) => `<div class="step"><span>${i + 1}</span><div>${x}</div></div>`).join('')}</div>`;
-  const th = wTheme();
   let h = `<div class="segmented"><button class="${S.widgetsMode === 'home' ? 'sel' : ''}" data-a="widgetsMode" data-v="home">Inicio</button><button class="${S.widgetsMode === 'lock' ? 'sel' : ''}" data-a="widgetsMode" data-v="lock">Pantalla bloqueada</button></div>`;
   if (S.widgetsMode === 'home') {
     h += `<div class="wk-list">`;
     h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', 'Mensajes')}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', 'Fotos')}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', 'Teléfono')}</div></div>`,
       'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
-    h += `<div class="wk-sec">Fechas fijadas ${tag()}</div>`;
+    h += `<div class="wk-sec">Fechas fijadas ${S.unlocked ? `<span class="wk-count">${S.pins.filter(pinEv).length} de ${S.pinMax}</span>` : tag()}</div>`;
     // Si la persona o la fecha ya no está (se borró, o datos guardados de antes), no se muestra
     h += S.pins.filter(pinEv).map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. Tocá para cambiarlo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
     h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.</div></div>`;
-    h += `<div class="wk-color"><div class="wk-colhead"><span>Color</span>${tag()}</div>${colorPicker(th, S.widgetTone, 'widgetTheme')}</div>`;
-    h += card(widgetMedium(th), 'Próximos', 'Mediano. Los tres que vienen, con cumples y fechas.', tag(), tap('theme'));
-    h += card(widgetLarge(th), 'Lista completa', 'Grande. Los siete que vienen.', tag(), tap('theme'));
-    h += `<div class="wk-pair">${card(widgetPhoto(), 'Con foto', 'Chico. Su cara y la cuenta regresiva.', tag(), tap('photo'))}${card(widgetSpecial(), 'Fecha especial', 'Chico. Aniversarios y casamientos.', tag(), tap('specials'))}</div>`;
+    h += `<div class="wk-sec">Listas y calendario ${tag()}</div>`;
+    h += Object.keys(W_KINDS).map(w => { const c = wCfg(w), [t, sub] = W_KINDS[w]; return card(W_RENDER[w](c), t, S.unlocked ? `${sub.split('.')[0]} · ${wDesignName(w, c)}. Tocá para cambiarlo.` : sub, '', S.unlocked ? `data-a="wOpen" data-w="${w}"` : `data-a="paywall" data-f="${w === 'cal' ? 'cal' : 'theme'}"`); }).join('');
     h += steps(['Mantené apretado el fondo de la pantalla de inicio hasta que los íconos se muevan.', 'Tocá <b>Editar</b> arriba a la izquierda y después <b>Agregar widget</b>.', 'Buscá <b>Unforgettables</b>, elegí el tamaño y tocá <b>Agregar widget</b>.']);
     h += `</div>`;
   } else {
@@ -637,7 +680,7 @@ function screenSettings() {
   h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Recordatorios', value: S.rem.on ? `${S.rem.time} · ${S.rem.before ? S.rem.before + 'd antes' : 'mismo día'}` : 'Apagados', a: 'go', extra: 'data-s="reminders"' }) +
     navRow({ icon: 'download', color: '#34c759', title: 'Importar desde Contactos', a: 'import' }), { header: 'Avisos y datos' });
   const ex = (icon, color, title, s) => S.unlocked ? navRow({ icon, color, title, a: 'go', extra: `data-s="${s}"` }) : `<button class="row has-icon" data-a="paywall" data-f="${s}"><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><span class="grow">${title}</span>${lockBadge()}</button>`;
-  h += section(ex('heart', '#af52de', 'Fechas especiales', 'specials') + ex('people', '#007aff', 'Compartir lista con pareja o familia', 'share') + ex('briefcase', '#5856d6', 'Modo trabajo', 'work') + ex('widgets', '#ff9500', 'Personalizar widgets', 'widgetsTab'), { header: 'Extras' });
+  h += section(ex('heart', '#af52de', 'Fechas especiales', 'specials') + ex('people', '#007aff', 'Compartir lista con pareja o familia', 'share') + ex('briefcase', '#5856d6', 'Modo trabajo', 'work') + ex('widgets', '#ff9500', 'Personalizar widgets', 'widgetsTab') + (S.unlocked ? navRow({ icon: 'clock', color: '#ff3b30', title: 'Máximo de fechas fijadas', value: String(S.pinMax), a: 'go', extra: 'data-s="pinMax"' }) : ''), { header: 'Extras' });
   h += section(navRow({ icon: 'moon', color: '#1c1c1e', title: 'Apariencia', value: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' }[S.theme], a: 'go', extra: 'data-s="appearance"' }) +
     navRow({ icon: 'info', color: '#8e8e93', title: 'Ver bienvenida otra vez', a: 'onboarding' }), { header: 'General' });
   h += section(`<button class="row accent" data-a="restore">Restaurar compra</button>`, { footer: 'Si ya pagaste en otro iPhone con el mismo Apple ID, tocá Restaurar.' });
@@ -659,6 +702,9 @@ function screenReminders() {
     h += section(`<div class="row"><span class="grow">Avisar a la hora del país de cada persona</span>${S.unlocked ? toggle(r.localTz, 'remToggle', 'data-k="localTz"') : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>`, { header: 'Personas en otro país', footer: 'Si alguien vive en otro huso horario, el aviso del día te llega cuando allá ya es su cumple.' });
   }
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Recordatorios', blur: true })}<div class="scroll" data-key="rem-scroll">${h}</div></div>`;
+}
+function screenPinMax() {
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Fechas fijadas', blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([[3, '3'], [4, '4'], [5, '5'], [6, '6'], [8, '8'], [10, '10']], S.pinMax, 'pinMax'), { header: 'Máximo en Widgets', footer: 'Así la pestaña Widgets no se llena. Cuando llegás al máximo, te preguntamos cuál reemplazar.' })}</div></div>`;
 }
 function screenAppearance() {
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Apariencia', blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([['system', 'Igual que el sistema'], ['light', 'Claro'], ['dark', 'Oscuro']], S.theme, 'theme'))}</div></div>`;
@@ -805,10 +851,10 @@ function sheetAddSpecial(o) {
 }
 
 const FEATURES = {
-  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Mediano y grande, en diez colores, con degradé o suave', ['widgetsTab', 'theme']], ['clock', '#ff3b30', 'Cualquier fecha en un widget', 'Cuenta regresiva hasta los segundos, en más de 15 diseños', ['pin']], ['hourglass', '#ff2d55', 'Con foto y de fechas especiales', 'Su cara o el aniversario, en tu inicio', ['photo']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
+  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Próximos, lista completa y calendario, con varios diseños y diez colores', ['widgetsTab', 'theme']], ['clock', '#ff3b30', 'Cualquier fecha en un widget', 'Cuenta regresiva hasta los segundos, en más de 15 diseños', ['pin']], ['calendar', '#ff2d55', 'Calendario', 'El mes o el año entero, con los cumples y las fechas marcados', ['cal']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
   extras: [['heart', '#af52de', 'Fechas especiales', 'Aniversarios, Día de la Madre y más', ['specials']], ['noAds', '#34c759', NO_ADS.t, NO_ADS.s, []], ['bulb', '#ff9500', 'Sugerencias de regalo', 'Según los gustos de cada uno', ['ideas']], ['share', '#34c759', 'Guardar ideas desde Compartir', 'Desde Safari, Mercado Libre o cualquier app', ['ideas']], ['globe', '#007aff', 'Aviso a la hora de su país', 'Para los que viven lejos', ['tz']], ['people', '#30b0c7', 'Compartir con pareja o familia', 'Una lista para todos', ['share']], ['briefcase', '#8e8e93', 'Modo trabajo', 'Contactos laborales con notas', ['work']]],
 };
-const FEATURE_NAMES = { pin: 'Mostrar una fecha en un widget', specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Elegir el color y el tamaño', photo: 'La cuenta regresiva con foto', lock: 'El widget de bloqueo' };
+const FEATURE_NAMES = { pin: 'Mostrar una fecha en un widget', specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Elegir el diseño y el color', cal: 'El widget calendario', lock: 'El widget de bloqueo' };
 function sheetPaywall(o) {
   const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`).join('');
   const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.</p>
@@ -837,16 +883,16 @@ function coverOnboarding(o) {
   return `<div class="full-cover ${o.fresh ? 'anim' : ''}"><div class="ob"><div class="art">${art}</div><h1>${title}</h1><p>${text}</p>${dots}<div class="stack">${btns}</div></div></div>`;
 }
 
-const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, pin: sheetPin, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, onboarding: coverOnboarding };
+const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, pin: sheetPin, wcfg: sheetWidget, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, onboarding: coverOnboarding };
 
 function dialogHtml(d) {
   if (d.type === 'alert') return `<div class="alert-wrap"><div class="alert ${d.fresh ? 'anim' : ''}"><div class="body"><div class="t">${d.title}</div><div class="m">${d.msg}</div></div><div class="btns">${d.buttons.map(b => `<button data-a="${b.a}">${b.label}</button>`).join('')}</div></div></div>`;
-  return `<div class="dim" data-a="dialogCancel" style="z-index:79"></div><div class="action-sheet ${d.fresh ? 'anim' : ''}"><div class="group"><div class="msg">${d.title}</div>${d.actions.map(x => `<button class="${x.destructive ? 'destructive' : ''}" data-a="${x.a}">${x.label}</button>`).join('')}</div><button class="cancel" data-a="dialogCancel">Cancelar</button></div>`;
+  return `<div class="dim" data-a="dialogCancel" style="z-index:79"></div><div class="action-sheet ${d.fresh ? 'anim' : ''}"><div class="group"><div class="msg">${d.title}</div>${d.actions.map(x => `<button class="${x.destructive ? 'destructive' : ''}" data-a="${x.a}" ${x.extra || ''}>${x.label}</button>`).join('')}</div><button class="cancel" data-a="dialogCancel">Cancelar</button></div>`;
 }
 
 /* ---------------- Render ---------------- */
 const phone = document.getElementById('phone');
-const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, specials: screenSpecials, share: screenShare, work: screenWork };
+const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, pinMax: screenPinMax, specials: screenSpecials, share: screenShare, work: screenWork };
 const TABS = [['list', 'Unforgettables', 'heart'], ['widgets', 'Widgets', 'widgets'], ['settings', 'Ajustes', 'gear']];
 const statusbar = `<div class="statusbar"><span>9:41</span><span class="icons"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.1-1.2A10 10 0 008 .8 10 10 0 00.9 3.7L2 4.9a8.4 8.4 0 016-2.4zm0 3.4c1.4 0 2.6.5 3.6 1.4l1.1-1.2A7 7 0 008 4.2a7 7 0 00-4.7 1.9l1.1 1.2c1-.9 2.2-1.4 3.6-1.4zm0 3.3c.6 0 1.1.2 1.5.6L8 11.4 6.5 9.8c.4-.4.9-.6 1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2.5" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div>`;
 
@@ -948,7 +994,17 @@ const A = {
   pinDesign(d) { topOverlay().design = d.v; render(); },
   pinColor(d) { topOverlay().color = d.v; render(); },
   pinColorTone(d) { topOverlay().tone = d.v; render(); },
-  pinSave() { const o = topOverlay(), cur = S.pins.find(x => x.k === o.k && x.id === o.id); if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
+  pinSave() {
+    const o = topOverlay(), cur = S.pins.find(x => x.k === o.k && x.id === o.id);
+    S.pins = S.pins.filter(pinEv);
+    // Llegó al máximo: preguntar cuál reemplazar en vez de sumar otra
+    if (!cur && S.pins.length >= S.pinMax) {
+      S.dialog = { type: 'confirm', title: `<b>Llegaste al máximo de ${S.pinMax} fechas fijadas</b><br>¿Cuál querés reemplazar? Podés subir el máximo en Ajustes.`, actions: S.pins.map((x, i) => ({ label: `${esc(pinEv(x).name)} · ${pinStyleName(x.style)}`, a: 'pinReplace', extra: `data-i="${i}"` })), fresh: true };
+      return render();
+    }
+    if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
+  pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }; S.dialog = null; persist(); dismiss(); toast(`Reemplazaste a ${old}`); },
+  pinMax(d) { S.pinMax = +d.v; persist(); render(); },
   pinRemove() { const o = topOverlay(); S.pins = S.pins.filter(x => !(x.k === o.k && x.id === o.id)); persist(); dismiss(); toast('Lo sacaste de Widgets', '🗑️'); },
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },
@@ -959,8 +1015,11 @@ const A = {
   remRound(d) { S.rem.roundBefore = +d.v; persist(); render(); },
   theme(d) { S.theme = d.v; applyTheme(); persist(); render(); },
   workToggle(d) { S.work[d.k] = !S.work[d.k]; persist(); render(); },
-  widgetTheme(d) { if (needUnlock('theme')) return; S.widgetTheme = d.v; persist(); render(); },
-  widgetThemeTone(d) { if (needUnlock('theme')) return; S.widgetTone = d.v; persist(); render(); },
+  wOpen(d) { if (needUnlock('theme')) return; present(Object.assign({ s: 'wcfg', w: d.w }, wCfg(d.w))); },
+  wDesign(d) { topOverlay().design = d.v; render(); },
+  wColor(d) { topOverlay().color = d.v; render(); },
+  wColorTone(d) { topOverlay().tone = d.v; render(); },
+  wSave() { const o = topOverlay(); S.wcfg[o.w] = { design: o.design, color: o.color, tone: o.tone }; persist(); dismiss(); toast('Widget actualizado'); },
   addSpecial() { present({ s: 'addSpecial', draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); },
   addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: d.n, kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Fecha del año', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
   specKind(d) { topOverlay().draft.kind = d.v; render(); },
@@ -978,7 +1037,7 @@ const A = {
   confirmBuy() { const o = topOverlay(); if (o.busy) return; o.busy = true; render(); setTimeout(() => { S.unlocked = true; S.overlays = S.overlays.filter(x => x.s !== 'store' && x.s !== 'paywall'); persist(); toast('¡Listo! Todo desbloqueado', '🎉'); }, 900); },
   restore() { if (S.unlocked) { toast('Ya está todo desbloqueado', '✅'); return; } toast('No encontramos compras con este Apple ID', 'ℹ️'); },
   unlockNow() { S.unlocked = true; persist(); toast('Desbloqueado (prototipo)', '🔓'); },
-  relock() { S.unlocked = false; S.widgetTheme = 'classic'; persist(); toast('Bloqueado otra vez', '🔒'); },
+  relock() { S.unlocked = false; S.widgetTheme = 'classic'; S.wcfg = {}; persist(); toast('Bloqueado otra vez', '🔒'); },
   refresh() { location.replace(location.pathname + '?r=' + Date.now()); },
   resetDemo() { S.people = demoPeople(); S.specials = demoSpecials(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Datos de ejemplo restablecidos', '↺'); },
   onboarding() { present({ s: 'onboarding', step: 0 }); },

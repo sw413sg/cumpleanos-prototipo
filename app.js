@@ -487,7 +487,17 @@ function pinEv(pin) {
   const yrs = x.y ? nextDate(x.m, x.d).getFullYear() - x.y : null;
   return { sp: x, n, name: x.name, sub: yrs ? `${yrs} ${yrs === 1 ? 'año' : 'años'}` : x.kind, t: nextDate(x.m, x.d).getTime() };
 }
+// Diseños de cada estilo (el primero es el de siempre)
+const PIN_DESIGNS = {
+  days: [['big', 'Grande'], ['ring', 'Anillo'], ['border', 'Borde'], ['center', 'Centrado'], ['date', 'Con fecha']],
+  secs: [['boxes', 'Cajitas'], ['flip', 'Flip'], ['digital', 'Digital'], ['rings', 'Anillos'], ['line', 'En frase']],
+  weeks: [['text', 'Texto'], ['dots', 'Puntos'], ['stack', 'Apilado']],
+  bar: [['solid', 'Lisa'], ['dotted', 'Punteada'], ['segments', 'Segmentos'], ['thick', 'Gruesa'], ['border', 'Borde']],
+};
+const pinDesign = pin => (PIN_DESIGNS[pin.style] || []).some(d => d[0] === pin.design) ? pin.design : (PIN_DESIGNS[pin.style] || [[null]])[0][0];
+const pinDesignName = pin => ((PIN_DESIGNS[pin.style] || []).find(d => d[0] === pinDesign(pin)) || [, ''])[1];
 // Lo que falta hasta las 0 h del día, en días / horas / minutos / segundos (se actualiza solo, ver tickAll)
+const TICK_MAX = { d: 365, h: 24, m: 60, s: 60 };
 function tickVal(t, f) {
   const r = Math.max(0, t - Date.now());
   if (f === 'd') return String(Math.floor(r / 864e5));
@@ -495,41 +505,69 @@ function tickVal(t, f) {
   return String(v).padStart(2, '0');
 }
 const tick = (t, f) => `<span class="tick" data-t="${t}" data-f="${f}">${tickVal(t, f)}</span>`;
-function tickAll() { phone.querySelectorAll('.tick').forEach(el => { el.textContent = tickVal(+el.dataset.t, el.dataset.f); }); }
+// Anillo que se vacía a medida que baja el número (días sobre 365, horas sobre 24…)
+const RING_C = 2 * Math.PI * 19;
+const ringDash = (t, f) => `${(Math.min(1, +tickVal(t, f) / TICK_MAX[f]) * RING_C).toFixed(1)} ${RING_C.toFixed(1)}`;
+function tickAll() {
+  phone.querySelectorAll('.tick').forEach(el => { el.textContent = tickVal(+el.dataset.t, el.dataset.f); });
+  phone.querySelectorAll('.tring').forEach(el => { el.setAttribute('stroke-dasharray', ringDash(+el.dataset.t, el.dataset.f)); });
+}
+// Borde que recorre todo el widget, lleno según cuánto pasó desde la última vez
+const borderSvg = (pct, w = 100, h = 100, r = 14) => `<svg class="w-border" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><rect x="2" y="2" width="${w - 4}" height="${h - 4}" rx="${r}" class="bg" vector-effect="non-scaling-stroke"/><rect x="2" y="2" width="${w - 4}" height="${h - 4}" rx="${r}" pathLength="100" stroke-dasharray="${pct} 100" class="fg" vector-effect="non-scaling-stroke"/></svg>`;
 function pinWidget(pin) {
   const ev = pinEv(pin); if (!ev) return '';
-  const st = pin.style, n = ev.n, size = st === 'secs' || st === 'bar' ? 'md' : 'sm';
+  const st = pin.style, dz = pinDesign(pin), n = ev.n, size = st === 'secs' || st === 'bar' ? 'md' : 'sm';
+  const pct = n === 0 ? 100 : Math.round((1 - n / 365) * 100);
+  const [a, u] = countParts(n);
   const deco = ev.p ? (n === 0 ? '<div class="confetti"></div>' : '') : spPattern(ev.sp);
   const icon = `<div class="w-emoji">${ic(ev.p ? 'cake' : spIc(ev.sp), '', 2.2)}</div>`;
   const label = `<div class="w-name ${size === 'sm' ? 'clamp' : ''}">${esc(ev.name)}</div><div class="w-sub">${esc(ev.sub)}</div>`;
-  const hoy = `<div class="w-count"><span class="big">Hoy</span><span class="u">${ev.p ? '🎉' : '💜'}</span></div>`;
-  let body;
+  const head = `<div class="w-pinhead">${icon}<div class="grow">${label}</div></div>`;
+  const count = n === 0 ? `<div class="w-count"><span class="big">Hoy</span><span class="u">${ev.p ? '🎉' : '💜'}</span></div>` : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`;
+  let body, extra = '';
   if (st === 'secs') {
-    body = `<div class="w-pinhead">${icon}<div class="grow">${label}</div></div>` + (n === 0 ? hoy :
-      `<div class="w-clock">${[['d', 'días'], ['h', 'horas'], ['m', 'min'], ['s', 'seg']].map(([f, l]) => `<div>${tick(ev.t, f)}<i>${l}</i></div>`).join('')}</div>`);
+    const F = [['d', 'días'], ['h', 'horas'], ['m', 'min'], ['s', 'seg']];
+    if (n === 0) body = head + count;
+    else if (dz === 'flip') body = head + `<div class="w-flip">${F.map(([f, l]) => `<div><b>${tick(ev.t, f)}</b><i>${l}</i></div>`).join('')}</div>`;
+    else if (dz === 'digital') body = head + `<div class="w-digital"><div>${F.map(([f]) => tick(ev.t, f)).join('<em>:</em>')}</div><div class="lab">${F.map(([, l]) => `<i>${l}</i>`).join('')}</div></div>`;
+    else if (dz === 'rings') body = head + `<div class="w-rings">${F.map(([f, l]) => `<div><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg tring" data-t="${ev.t}" data-f="${f}" stroke-dasharray="${ringDash(ev.t, f)}" transform="rotate(-90 22 22)"/></svg><b>${tick(ev.t, f)}</b><i>${l}</i></div>`).join('')}</div>`;
+    else if (dz === 'line') body = head + `<div class="w-sentence">Faltan ${tick(ev.t, 'd')} días, ${tick(ev.t, 'h')} h, ${tick(ev.t, 'm')} min y ${tick(ev.t, 's')} s</div>`;
+    else body = head + `<div class="w-clock">${F.map(([f, l]) => `<div>${tick(ev.t, f)}<i>${l}</i></div>`).join('')}</div>`;
   } else if (st === 'bar') {
-    const pct = Math.round((1 - n / 365) * 100);
-    const [a, u] = countParts(n);
-    body = `<div class="w-pinhead">${icon}<div class="grow">${label}</div>${n === 0 ? '' : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`}</div>
-      <div><div class="w-bar"><span style="width:${n === 0 ? 100 : pct}%"></span></div><div class="w-barlab"><span>Desde el último</span><span>${n === 0 ? '¡Es hoy!' : `${pct}% del año`}</span></div></div>`;
+    const top = `<div class="w-pinhead">${icon}<div class="grow">${label}</div>${n === 0 ? '' : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`}</div>`;
+    const lab = `<div class="w-barlab"><span>Desde el último</span><span>${n === 0 ? '¡Es hoy!' : `${pct}% del año`}</span></div>`;
+    let bar;
+    if (dz === 'dotted') { const k = 24, on = Math.round(pct / 100 * k); bar = `<div class="w-dots">${Array.from({ length: k }, (_, i) => `<span class="${i < on ? 'on' : ''}"></span>`).join('')}</div>`; }
+    else if (dz === 'segments') { const on = pct / 100 * 12; bar = `<div class="w-segs">${Array.from({ length: 12 }, (_, i) => `<span><i style="width:${Math.max(0, Math.min(1, on - i)) * 100}%"></i></span>`).join('')}</div>`; }
+    else if (dz === 'thick') bar = `<div class="w-bar thick"><span style="width:${pct}%"></span><em>${n === 0 ? '¡Es hoy!' : `${pct}%`}</em></div>`;
+    else bar = `<div class="w-bar"><span style="width:${pct}%"></span></div>`;
+    if (dz === 'border') { extra = borderSvg(pct, 330, 158, 22); body = top + lab; }
+    else body = top + `<div>${bar}${dz === 'thick' ? '' : lab}</div>`;
   } else if (st === 'weeks') {
     const w = Math.floor(n / 7), d = n % 7;
-    body = icon + (n === 0 ? hoy : `<div class="w-count">${w ? `<span class="big">${w}</span><span class="u">${w === 1 ? 'sem' : 'sem'}</span>` : ''}${d || !w ? `<span class="big">${d}</span><span class="u">${d === 1 ? 'día' : 'días'}</span>` : ''}</div>`) + `<div>${label}</div>`;
+    const txt = `${w ? `${w} ${w === 1 ? 'semana' : 'semanas'}` : ''}${w && d ? ' y ' : ''}${d || !w ? `${d} ${d === 1 ? 'día' : 'días'}` : ''}`;
+    if (n === 0) body = icon + count + `<div>${label}</div>`;
+    else if (dz === 'dots') { const shown = Math.min(n, 35); body = `<div class="w-pinhead">${icon}<span class="w-sub">${txt}</span></div><div class="w-wdots">${Array.from({ length: Math.ceil(shown / 7) * 7 }, (_, i) => `<span class="${i < shown ? 'on' : ''}"></span>`).join('')}</div>${n > 35 ? `<div class="w-sub">y ${n - 35} días más</div>` : ''}<div class="w-name clamp">${esc(ev.name)}</div>`; }
+    else if (dz === 'stack') body = icon + `<div class="w-stack"><b>${w || d}</b><span>${w ? (w === 1 ? 'semana' : 'semanas') : (d === 1 ? 'día' : 'días')}</span>${w && d ? `<i>y ${d} ${d === 1 ? 'día' : 'días'}</i>` : ''}</div><div class="w-name clamp">${esc(ev.name)}</div>`;
+    else body = icon + `<div class="w-count">${w ? `<span class="big">${w}</span><span class="u">sem</span>` : ''}${d || !w ? `<span class="big">${d}</span><span class="u">${d === 1 ? 'día' : 'días'}</span>` : ''}</div>` + `<div>${label}</div>`;
   } else {
-    const [a, u] = countParts(n);
-    body = icon + (n === 0 ? hoy : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`) + `<div>${label}</div>`;
+    if (dz === 'ring') body = `<div class="w-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg" stroke-dasharray="${(pct / 100 * RING_C).toFixed(1)} ${RING_C.toFixed(1)}" transform="rotate(-90 22 22)"/></svg><div><b>${n === 0 ? 'Hoy' : a}</b><i>${n === 0 ? '' : u}</i></div></div><div class="w-name clamp center">${esc(ev.name)}</div>`;
+    else if (dz === 'center') body = `<div class="w-center"><b>${n === 0 ? 'Hoy' : a}</b><span>${n === 0 ? (ev.p ? '¡es su cumple!' : '¡es hoy!') : u}</span></div><div class="w-name clamp center">${esc(ev.name)}</div>`;
+    else if (dz === 'date') { const dt = nextDate((ev.p || ev.sp).m, (ev.p || ev.sp).d); body = `<div class="w-cal1"><i>${cap(dt.toLocaleDateString('es-AR', { month: 'short' }).replace('.', ''))}</i><b>${dt.getDate()}</b></div>${count}<div class="w-name clamp">${esc(ev.name)}</div>`; }
+    else { body = icon + count + `<div>${label}</div>`; if (dz === 'border') extra = borderSvg(pct, 100, 100, 14); }
   }
   // Sin color elegido: rojo para cumples y violeta para fechas (en "Suave" también)
   const ck = pin.color && pin.color !== 'classic' ? pin.color : pin.tone === 'soft' ? (ev.p ? 'red' : 'purple') : null;
   const col = ck ? tAttrs(ck, pin.tone) : null;
-  return `<div class="widget ${size} w-pin ${ev.p ? 'w-party' : 'w-special'} ${col ? col.cls : ''}" style="${col ? col.style : ''}">${deco}${body}</div>`;
+  return `<div class="widget ${size} w-pin d-${dz} ${ev.p ? 'w-party' : 'w-special'} ${col ? col.cls : ''}" style="${col ? col.style : ''}">${deco}${extra}${body}</div>`;
 }
 function sheetPin(o) {
   const pinned = S.pins.some(x => x.k === o.k && x.id === o.id);
-  const pin = { k: o.k, id: o.id, style: o.style, color: o.color, tone: o.tone };
+  const pin = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone };
   const ev = pinEv(pin);
   const styles = `<div class="pin-styles">${PIN_STYLES.map(([k, t, s, icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}"><span class="kp-ic">${ic(icon, '', 2)}</span><span><b>${t}</b><span class="s">${s}</span></span></button>`).join('')}</div>`;
-  const h = `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>${styles}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2])}</div>` +
+  const designs = `<div class="wk-color pin-color"><div class="wk-colhead"><span>Diseño</span></div><div class="pin-designs">${PIN_DESIGNS[o.style].map(([k, t]) => `<button class="${pinDesign(pin) === k ? 'sel' : ''}" data-a="pinDesign" data-v="${k}">${t}</button>`).join('')}</div></div>`;
+  const h = `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>${styles}${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2])}</div>` +
     (pinned ? section(`<button class="row destructive" data-a="pinRemove">Quitar de Widgets</button>`) : '') +
     `<div class="section-footer" style="margin:-20px 16px 24px">Queda en la pestaña Widgets. Para verlo en tu inicio, agregá el widget <b>Fecha fijada</b> de Unforgettables y elegí ${esc(ev.p ? ev.name.split(' ')[0] : ev.name)}.</div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Mostrar en un widget', right: `<button class="navbtn bold" data-a="pinSave">${pinned ? 'Listo' : 'Agregar'}</button>` }) + `<div class="scroll">${h}</div>`);
@@ -573,7 +611,8 @@ function screenWidgets() {
     h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', 'Mensajes')}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', 'Fotos')}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', 'Teléfono')}</div></div>`,
       'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
     h += `<div class="wk-sec">Fechas fijadas ${tag()}</div>`;
-    h += S.pins.map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)}. Tocá para cambiar el estilo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
+    // Si la persona o la fecha ya no está (se borró, o datos guardados de antes), no se muestra
+    h += S.pins.filter(pinEv).map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. Tocá para cambiarlo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
     h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.</div></div>`;
     h += `<div class="wk-color"><div class="wk-colhead"><span>Color</span>${tag()}</div>${colorPicker(th, S.widgetTone, 'widgetTheme')}</div>`;
     h += card(widgetMedium(th), 'Próximos', 'Mediano. Los tres que vienen, con cumples y fechas.', tag(), tap('theme'));
@@ -766,7 +805,7 @@ function sheetAddSpecial(o) {
 }
 
 const FEATURES = {
-  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Mediano y grande, en diez colores, con degradé o suave', ['widgetsTab', 'theme']], ['clock', '#ff3b30', 'Cualquier fecha en un widget', 'Con cuenta regresiva hasta los segundos', ['pin']], ['hourglass', '#ff2d55', 'Con foto y de fechas especiales', 'Su cara o el aniversario, en tu inicio', ['photo']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
+  widgets: [['paint', '#ff9500', 'Widgets a tu gusto', 'Mediano y grande, en diez colores, con degradé o suave', ['widgetsTab', 'theme']], ['clock', '#ff3b30', 'Cualquier fecha en un widget', 'Cuenta regresiva hasta los segundos, en más de 15 diseños', ['pin']], ['hourglass', '#ff2d55', 'Con foto y de fechas especiales', 'Su cara o el aniversario, en tu inicio', ['photo']], ['lockscreen', '#5856d6', 'Pantalla de bloqueo', 'El próximo cumple sin desbloquear', ['lock']]],
   extras: [['heart', '#af52de', 'Fechas especiales', 'Aniversarios, Día de la Madre y más', ['specials']], ['noAds', '#34c759', NO_ADS.t, NO_ADS.s, []], ['bulb', '#ff9500', 'Sugerencias de regalo', 'Según los gustos de cada uno', ['ideas']], ['share', '#34c759', 'Guardar ideas desde Compartir', 'Desde Safari, Mercado Libre o cualquier app', ['ideas']], ['globe', '#007aff', 'Aviso a la hora de su país', 'Para los que viven lejos', ['tz']], ['people', '#30b0c7', 'Compartir con pareja o familia', 'Una lista para todos', ['share']], ['briefcase', '#8e8e93', 'Modo trabajo', 'Contactos laborales con notas', ['work']]],
 };
 const FEATURE_NAMES = { pin: 'Mostrar una fecha en un widget', specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Elegir el color y el tamaño', photo: 'La cuenta regresiva con foto', lock: 'El widget de bloqueo' };
@@ -904,11 +943,12 @@ const A = {
   addGusto(d) { present({ s: 'gusto', id: d.id, text: '' }); },
   gustoToggle(d) { const o = topOverlay(), p = person(o.id), i = p.gustos.indexOf(d.v); if (i >= 0) p.gustos.splice(i, 1); else { p.gustos.push(d.v); o.text = ''; } persist(); render(); },
   remindPerson(d) { present({ s: 'remindPerson', id: d.id }); },
-  pin(d) { if (needUnlock('pin')) return; const cur = S.pins.find(x => x.k === d.k && x.id === d.id); present({ s: 'pin', k: d.k, id: d.id, style: cur ? cur.style : 'days', color: cur && cur.color || 'classic', tone: cur && cur.tone || 'grad' }); },
-  pinStyle(d) { topOverlay().style = d.v; render(); },
+  pin(d) { if (needUnlock('pin')) return; const cur = S.pins.find(x => x.k === d.k && x.id === d.id); present({ s: 'pin', k: d.k, id: d.id, style: cur ? cur.style : 'days', design: cur && cur.design || null, color: cur && cur.color || 'classic', tone: cur && cur.tone || 'grad' }); },
+  pinStyle(d) { const o = topOverlay(); o.style = d.v; o.design = null; render(); },
+  pinDesign(d) { topOverlay().design = d.v; render(); },
   pinColor(d) { topOverlay().color = d.v; render(); },
   pinColorTone(d) { topOverlay().tone = d.v; render(); },
-  pinSave() { const o = topOverlay(), cur = S.pins.find(x => x.k === o.k && x.id === o.id); if (cur) Object.assign(cur, { style: o.style, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
+  pinSave() { const o = topOverlay(), cur = S.pins.find(x => x.k === o.k && x.id === o.id); if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
   pinRemove() { const o = topOverlay(); S.pins = S.pins.filter(x => !(x.k === o.k && x.id === o.id)); persist(); dismiss(); toast('Lo sacaste de Widgets', '🗑️'); },
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },

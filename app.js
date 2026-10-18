@@ -573,7 +573,8 @@ function screenWidgets() {
     h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', 'Mensajes')}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', 'Fotos')}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', 'Teléfono')}</div></div>`,
       'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
     h += `<div class="wk-sec">Fechas fijadas ${tag()}</div>`;
-    h += S.pins.map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)}. Tocá para cambiar el estilo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
+    // Si la persona o la fecha ya no está (se borró, o datos guardados de antes), no se muestra
+    h += S.pins.filter(pinEv).map(pin => card(pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)}. Tocá para cambiar el estilo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
     h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.</div></div>`;
     h += `<div class="wk-color"><div class="wk-colhead"><span>Color</span>${tag()}</div>${colorPicker(th, S.widgetTone, 'widgetTheme')}</div>`;
     h += card(widgetMedium(th), 'Próximos', 'Mediano. Los tres que vienen, con cumples y fechas.', tag(), tap('theme'));

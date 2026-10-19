@@ -331,7 +331,7 @@ function screenList() {
       }
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ right: `<button class="navbtn" data-a="listView" aria-label="${T(S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario')}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="${T('Agregar persona')}">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ left: '<div class="nav-title">Unforgettables</div>', right: `<button class="navbtn" data-a="listView" aria-label="${T(S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario')}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="${T('Agregar persona')}">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title app-title">Unforgettables</div>${body}</div></div>`;
 }
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
@@ -1023,6 +1023,7 @@ function render() {
   html += '<div class="home-ind"></div>';
   phone.innerHTML = html;
   phone.querySelectorAll('.scroll[data-key]').forEach(el => { if (scrolls[el.dataset.key] != null) el.scrollTop = scrolls[el.dataset.key]; });
+  phone.querySelectorAll('.scroll[data-key="list-scroll"]').forEach(syncNavTitle);
   phone.querySelectorAll('.wheel').forEach(w => { w.scrollTop = (+w.dataset.index) * 36; });
   phone.querySelectorAll('.pin-car').forEach(c => { c.scrollLeft = (+c.dataset.i) * c.clientWidth; });
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus({ preventScroll: true }); if (selStart != null && el.setSelectionRange) try { el.setSelectionRange(selStart, selStart); } catch { } } }
@@ -1221,6 +1222,12 @@ phone.addEventListener('pointermove', e => {
   ph.x = cl(drag.px - (e.clientX - drag.x) / drag.w * k); ph.y = cl(drag.py - (e.clientY - drag.y) / drag.h * k); applyPhotoAdj(ph);
 });
 ['pointerup', 'pointercancel'].forEach(t => phone.addEventListener(t, () => { drag = null; }));
+// Título grande que, al bajar, queda chico en la franja de arriba (como el large title de iOS)
+function syncNavTitle(sc) {
+  const t = sc.querySelector('.app-title'), nav = sc.parentNode.querySelector('.navbar');
+  if (t && nav) nav.classList.toggle('compact', t.getBoundingClientRect().bottom - 10 < nav.getBoundingClientRect().bottom);
+}
+phone.addEventListener('scroll', e => { if (e.target.dataset && e.target.dataset.key === 'list-scroll') syncNavTitle(e.target); }, true);
 let carT;
 phone.addEventListener('scroll', e => {
   const c = e.target; if (!c.classList || !c.classList.contains('pin-car')) return;

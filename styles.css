@@ -86,6 +86,9 @@ input, textarea, select { font: inherit; color: var(--label); letter-spacing: in
 .navbtn.back svg { width: 13px; height: 21px; margin-left: -4px; }
 .nav-right { display: flex; gap: 18px; align-items: center; }
 .large-title { /* SwiftUI: .navigationBarTitleDisplayMode(.large) */ font-size: 34px; font-weight: 700; letter-spacing: .37px; line-height: 41px; padding: 2px 16px 8px; }
+.app-title { font-size: 30px; line-height: 36px; }
+.nav-title { font-size: 22px; font-weight: 700; letter-spacing: .35px; opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.navbar.compact .nav-title { opacity: 1; transform: none; }
 .app-icon { display: block; width: 100%; height: 100%; border-radius: 22.5%; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
 
 /* ---------- List(.insetGrouped) / Form ---------- */

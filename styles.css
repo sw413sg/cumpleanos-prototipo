@@ -621,9 +621,6 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .w-segs i { display: block; height: 100%; background: var(--wfg); }
 .widget.d-border.md { padding: 18px; }
 /* Hoja: elegir diseño */
-.pin-designs { display: flex; flex-wrap: wrap; gap: 8px; }
-.pin-designs button { padding: 8px 14px; border-radius: 18px; background: var(--fill); font-size: 15px; font-weight: 500; }
-.pin-designs button.sel { background: var(--accent); color: #fff; font-weight: 600; }
 .widget.d-dots .w-pinhead .w-sub { white-space: normal; line-height: 1.2; }
 
 /* Próximos, Lista completa y Calendario: diseños (SwiftUI: widget configurable con AppIntent: diseño y color) */

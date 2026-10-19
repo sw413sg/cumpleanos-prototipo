@@ -641,11 +641,32 @@ function sheetPin(o) {
   const ev = pinEv(pin);
   const styles = `<div class="pin-styles">${PIN_STYLES.map(([k, t, s, icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}"><span class="kp-ic">${ic(icon, '', 2)}</span><span><b>${t}</b><span class="s">${s}</span></span></button>`).join('')}</div>`;
   const designs = `<div class="wk-color pin-color"><div class="wk-colhead"><span>Diseño</span></div><div class="pin-designs">${PIN_DESIGNS[o.style].map(([k, t]) => `<button class="${pinDesign(pin) === k ? 'sel' : ''}" data-a="pinDesign" data-v="${k}">${t}</button>`).join('')}</div></div>`;
-  const h = `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>${styles}${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2], o.photo)}</div>` +
+  const h = (SEL_ALT[SEL] ? SEL_ALT[SEL](o, pin) : `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>${styles}${designs}`) + `<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2], o.photo)}</div>` +
     (pinned ? section(`<button class="row destructive" data-a="pinRemove">Quitar de Widgets</button>`) : '') +
     `<div class="section-footer" style="margin:-20px 16px 24px">Queda en la pestaña Widgets. Para verlo en tu inicio, agregá el widget <b>Fecha fijada</b> de Unforgettables y elegí ${esc(ev.p ? ev.name.split(' ')[0] : ev.name)}.</div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Mostrar en un widget', right: `<button class="navbtn bold" data-a="pinSave">${pinned ? 'Listo' : 'Agregar'}</button>` }) + `<div class="scroll">${h}</div>`);
 }
+// Alternativas para elegir estilo y diseño de una fecha fijada (?selector=a|b|c|d), para compararlas
+const SEL = new URLSearchParams(location.search).get('selector');
+// Widget de verdad, achicado: md mide 330×158 y sm 158×158
+const mini = (pin, s) => { const md = pin.style === 'secs' || pin.style === 'bar', w = md ? 330 : 158; return `<div class="mini" style="width:${w * s}px;height:${158 * s}px"><div class="mini-in" style="width:${w}px;transform:scale(${s})">${pinWidget(pin)}</div></div>`; };
+const STYLE_SHORT = { days: 'Días', secs: 'Segundos', weeks: 'Semanas', bar: 'Barra' };
+const styleTabs = (o, cls) => `<div class="${cls}">${PIN_STYLES.map(([k, t, , icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}">${ic(icon, '', 2)}<span>${STYLE_SHORT[k]}</span></button>`).join('')}</div>`;
+const SEL_ALT = {
+  // A. Como la pantalla bloqueada del iPhone: se desliza el widget para cambiar de diseño
+  a: (o, pin) => {
+    const ds = PIN_DESIGNS[o.style], cur = Math.max(0, ds.findIndex(d => d[0] === pinDesign(pin)));
+    return styleTabs(o, 'alt-glass') + `<div class="alt-car" data-i="${cur}">${ds.map(([k]) => `<div class="alt-slide"><div class="wk-stage">${pinWidget({ ...pin, design: k })}</div></div>`).join('')}</div>` +
+      `<div class="alt-carlab"><b>${ds[cur][1]}</b><span class="alt-dots">${ds.map((_, i) => `<i class="${i === cur ? 'on' : ''}"></i>`).join('')}</span><span class="s">Deslizá para ver otro diseño</span></div>`;
+  },
+  // B. Tira de miniaturas en vivo debajo de la vista previa (como los filtros de una cámara)
+  b: (o, pin) => `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>` + styleTabs(o, 'alt-under') +
+    `<div class="alt-strip">${PIN_DESIGNS[o.style].map(([k, t]) => `<button class="${pinDesign(pin) === k ? 'sel' : ''}" data-a="pinDesign" data-v="${k}">${mini({ ...pin, design: k }, o.style === 'secs' || o.style === 'bar' ? .36 : .62)}<span>${t}</span></button>`).join('')}</div>`,
+  // C. Galería: todos los diseños del estilo a la vista, en grilla
+  c: (o, pin) => styleTabs(o, 'alt-chips') + `<div class="alt-grid ${o.style === 'secs' || o.style === 'bar' ? 'wide' : ''}">${PIN_DESIGNS[o.style].map(([k, t]) => `<button class="${pinDesign(pin) === k ? 'sel' : ''}" data-a="pinDesign" data-v="${k}"><div class="wk-stage">${mini({ ...pin, design: k }, o.style === 'secs' || o.style === 'bar' ? .9 : .82)}</div><span>${pinDesign(pin) === k ? ic('checkCircle', '', 2) : ''}${t}</span></button>`).join('')}</div>`,
+  // D. Todo en una sola pantalla: cada estilo es una fila de diseños, como la galería de widgets
+  d: (o, pin) => `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>` + PIN_STYLES.map(([k, t, sub]) => `<div class="alt-row"><div class="alt-rowhead"><b>${t}</b><span>${sub}</span></div><div class="alt-strip">${PIN_DESIGNS[k].map(([dk, dt]) => `<button class="${o.style === k && pinDesign(pin) === dk ? 'sel' : ''}" data-a="pinPick" data-st="${k}" data-v="${dk}">${mini({ ...pin, style: k, design: dk }, k === 'secs' || k === 'bar' ? .36 : .62)}<span>${dt}</span></button>`).join('')}</div></div>`).join(''),
+};
 // Ajustar la foto de fondo: se arrastra para elegir qué parte se ve, zoom y oscurecer (SwiftUI: PhotosPicker + DragGesture)
 function sheetPhotoAdj(o) {
   const parent = S.overlays[S.overlays.indexOf(o) - 1], ph = o.photo;
@@ -973,6 +994,7 @@ function render() {
   phone.innerHTML = html;
   phone.querySelectorAll('.scroll[data-key]').forEach(el => { if (scrolls[el.dataset.key] != null) el.scrollTop = scrolls[el.dataset.key]; });
   phone.querySelectorAll('.wheel').forEach(w => { w.scrollTop = (+w.dataset.index) * 36; });
+  phone.querySelectorAll('.alt-car').forEach(c => { c.scrollLeft = (+c.dataset.i) * c.clientWidth; });
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus({ preventScroll: true }); if (selStart != null && el.setSelectionRange) try { el.setSelectionRange(selStart, selStart); } catch { } } }
   S.pushed = false; S.overlays.forEach(o => o.fresh = false); if (S.dialog) S.dialog.fresh = false; if (S.toast) S.toast.fresh = false;
 }
@@ -1049,6 +1071,7 @@ const A = {
   pin(d) { if (needUnlock('pin')) return; const cur = S.pins.find(x => x.k === d.k && x.id === d.id); present({ s: 'pin', k: d.k, id: d.id, style: cur ? cur.style : 'days', design: cur && cur.design || null, color: cur && cur.color || 'classic', tone: cur && cur.tone || 'grad', photo: cur && cur.photo || null }); },
   pinStyle(d) { const o = topOverlay(); o.style = d.v; o.design = null; render(); },
   pinDesign(d) { topOverlay().design = d.v; render(); },
+  pinPick(d) { Object.assign(topOverlay(), { style: d.st, design: d.v }); render(); },
   pinColor(d) { topOverlay().color = d.v; render(); },
   pinColorTone(d) { topOverlay().tone = d.v; render(); },
   pinSave() {
@@ -1151,6 +1174,12 @@ phone.addEventListener('pointermove', e => {
   ph.x = cl(drag.px - (e.clientX - drag.x) / drag.w * k); ph.y = cl(drag.py - (e.clientY - drag.y) / drag.h * k); applyPhotoAdj(ph);
 });
 ['pointerup', 'pointercancel'].forEach(t => phone.addEventListener(t, () => { drag = null; }));
+let carT;
+phone.addEventListener('scroll', e => {
+  const c = e.target; if (!c.classList || !c.classList.contains('alt-car')) return;
+  clearTimeout(carT);
+  carT = setTimeout(() => { const o = topOverlay(), i = Math.round(c.scrollLeft / c.clientWidth); if (o && +c.dataset.i !== i) { o.design = PIN_DESIGNS[o.style][i][0]; render(); } }, 140);
+}, true);
 let wheelT;
 phone.addEventListener('scroll', e => {
   const w = e.target; if (!w.classList || !w.classList.contains('wheel')) return;

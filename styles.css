@@ -561,12 +561,6 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 /* Hoja "Mostrar en un widget" */
 .pin-prev { margin: 4px 16px 18px; }
 .pin-prev .wk-stage { border-radius: 22px; padding: 18px; }
-.pin-styles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px 28px; }
-.pin-styles button { display: flex; gap: 10px; align-items: center; text-align: left; padding: 12px; border-radius: 18px; background: var(--cell); box-shadow: inset 0 0 0 2px transparent; }
-.pin-styles button.sel { box-shadow: inset 0 0 0 2px var(--accent); }
-.pin-styles .kp-ic { background: linear-gradient(160deg, #ffb340, #ff9500 60%, #e07b00); }
-.pin-styles b { display: block; font-size: 15px; }
-.pin-styles .s { display: block; font-size: 12px; color: var(--label2); line-height: 1.25; letter-spacing: 0; }
 
 .wk-tone { margin: 14px 0 2px; }
 .pin-color { margin: -12px 16px 28px; }
@@ -592,15 +586,7 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .w-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: .95; }
 .w-center b { font-size: 64px; font-weight: 800; letter-spacing: -2px; color: var(--wfg); }
 .w-center span { font-size: 14px; font-weight: 600; opacity: .85; }
-.w-cal1 { width: 44px; border-radius: 10px; overflow: hidden; text-align: center; background: #fff; color: #1c1c1e; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
-.w-cal1 i { display: block; font-style: normal; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 0; color: #fff; background: var(--accent-w, #e23d4a); }
-.w-special .w-cal1 i { --accent-w: #9b51e0; }
-.t-soft .w-cal1 i, .t-color .w-cal1 i { --accent-w: #3a3a3c; }
-.w-cal1 b { display: block; font-size: 22px; font-weight: 700; padding: 3px 0 5px; }
 /* Con segundos */
-.w-flip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
-.w-flip b { position: relative; display: block; border-radius: 9px; padding: 8px 0; font-size: 28px; line-height: 1; font-weight: 700; color: #fff; background: linear-gradient(#2c2c2e 50%, #1c1c1e 50%); font-variant-numeric: tabular-nums; }
-.w-flip b::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,.6); }
 .w-flip i, .w-digital i, .w-rings i { font-style: normal; font-size: 10px; font-weight: 600; opacity: .85; display: block; margin-top: 3px; }
 .w-digital { text-align: center; }
 .w-digital > div:first-child { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 34px; font-weight: 700; letter-spacing: 1px; color: var(--wfg); line-height: 1; }
@@ -699,3 +685,77 @@ textarea.field { resize: none; min-height: 66px; line-height: 1.35; }
 .wk-stage { position: relative; }
 .wk-x { position: absolute; top: 8px; right: 8px; z-index: 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(60,60,67,.18); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--label); }
 .wk-x svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+
+/* Foto de fondo del widget (SwiftUI: Image del App Group con .scaledToFill, offset y escala) */
+.widget > .w-photo, .widget > .w-photodim { position: absolute; inset: 0; }
+.widget > .w-photo { background-size: cover; background-repeat: no-repeat; }
+.widget.t-photo { text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.widget.t-photo .hearts { display: none; }
+.wk-photo { margin-top: 14px; border-radius: 16px; background: var(--fill, rgba(120,120,128,.12)); box-shadow: inset 0 0 0 2px transparent; }
+.wk-photo.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.wk-photobtn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left; }
+.wk-photobtn .thumb { flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: linear-gradient(#ffd25e, #ff9f0a) center / cover no-repeat; }
+.wk-photobtn .thumb svg { width: 22px; height: 22px; }
+.wk-photobtn b { display: block; font-size: 15px; }
+.wk-photobtn .s { display: block; font-size: 12px; color: var(--label2); letter-spacing: 0; }
+.wk-photoacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 12px 12px; }
+.wk-photoacts button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px; border-radius: 12px; background: var(--cell); color: var(--accent); font-size: 15px; font-weight: 600; }
+.wk-photoacts svg { width: 18px; height: 18px; }
+/* Hoja "Ajustar foto" */
+#photoStage .widget { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+#photoStage .widget:active { cursor: grabbing; }
+.adj-hint { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.45); padding: 3px 9px; border-radius: 10px; pointer-events: none; white-space: nowrap; }
+.adj-hint svg { width: 13px; height: 13px; }
+.pin-prev #photoStage { padding-bottom: 30px; }
+.adj { margin-top: 0; }
+.adj-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; }
+.adj-lab { width: 82px; font-size: 15px; font-weight: 600; }
+.adj-ic { color: var(--label2); display: grid; }
+.adj-ic svg { width: 16px; height: 16px; }
+.adj-row input[type=range] { flex: 1; accent-color: var(--accent); }
+
+/* Elegir estilo (pestañas) y diseño (carrusel) de una fecha fijada */
+.pin-tabs { display: flex; margin: 4px 16px 14px; padding: 4px; border-radius: 22px; background: var(--fill); gap: 2px; }
+.pin-tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 6px; border-radius: 18px; font-size: 12px; font-weight: 600; color: var(--label2); letter-spacing: 0; transition: background .2s; }
+.pin-tabs button svg { width: 20px; height: 20px; }
+.pin-tabs button.sel { background: var(--cell); color: var(--accent); box-shadow: 0 2px 10px rgba(0,0,0,.08), inset 0 0 0 .5px rgba(255,255,255,.6); }
+.pin-car { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 0 8px; }
+.pin-car::-webkit-scrollbar { display: none; }
+.pin-slide { flex: 0 0 100%; scroll-snap-align: center; padding: 0 16px; box-sizing: border-box; }
+.pin-slide .wk-stage { border-radius: 22px; padding: 22px 18px; }
+.pin-carlab { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 2px 16px 26px; }
+.pin-carlab b { font-size: 17px; }
+.pin-carlab .s { font-size: 12px; color: var(--label2); }
+.pin-dots { display: flex; gap: 6px; }
+.pin-dots button { width: 7px; height: 7px; padding: 0; border-radius: 4px; background: var(--label3, rgba(60,60,67,.3)); transition: width .2s; }
+.pin-dots button.on { width: 20px; background: var(--accent); }
+
+/* Flip: tarjetas claras de reloj de paletas, con bisagra y la hoja de arriba que cae al cambiar */
+.widget .w-flip { display: flex; align-items: flex-start; gap: 4px; text-align: center; }
+.w-flip > div { flex: 1; }
+.w-flip em { font-style: normal; font-size: 22px; font-weight: 700; line-height: 44px; opacity: .7; }
+.widget .w-flip b { position: relative; display: block; height: 44px; line-height: 44px; border-radius: 8px; font-size: 30px; font-weight: 800; letter-spacing: -.5px; color: #1c1c1e; background: linear-gradient(#fff 50%, #ececef 50%); box-shadow: 0 3px 0 rgba(0,0,0,.18), 0 6px 12px rgba(0,0,0,.18); font-variant-numeric: tabular-nums; perspective: 160px; overflow: visible; }
+.widget .w-flip b::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - .5px); height: 1px; background: rgba(0,0,0,.22); }
+.widget .w-flip b::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 50%; border-radius: 8px 8px 0 0; background: linear-gradient(#f4f4f6, #e2e2e6); transform-origin: bottom; opacity: 0; pointer-events: none; z-index: 1; }
+.widget .w-flip b.fl::before { animation: flapDown .38s ease-in; }
+@keyframes flapDown { 0% { opacity: 1; transform: rotateX(0); } 100% { opacity: 1; transform: rotateX(-90deg); } }
+.w-flip i { margin-top: 6px; }
+
+/* Con fecha: hoja de almanaque */
+.widget.d-date { padding: 10px; gap: 6px; }
+.w-sheet { flex: 1; display: flex; flex-direction: column; border-radius: 13px; overflow: hidden; background: #fff; color: #1c1c1e; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.w-sheettop { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 5px 0 4px; font-size: 12px; font-weight: 700; color: #fff; background: var(--sheet, #e23d4a); letter-spacing: .2px; }
+.w-special .w-sheettop { --sheet: #9b51e0; }
+.t-color .w-sheettop, .t-soft .w-sheettop { --sheet: var(--wcol, var(--accent)); }
+.t-photo .w-sheettop { --sheet: #1c1c1e; }
+.w-sheettop span { width: 6px; height: 6px; border-radius: 50%; background: rgba(0,0,0,.35); box-shadow: inset 0 1px 1px rgba(0,0,0,.4); }
+.w-sheetday { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; text-shadow: none; }
+.w-sheetday b { font-size: 46px; font-weight: 800; letter-spacing: -2px; }
+.w-sheetday i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--sheet, #e23d4a); margin-top: 3px; }
+.w-special .w-sheetday i { --sheet: #9b51e0; }
+.t-color .w-sheetday i, .t-soft .w-sheetday i { --sheet: var(--wcol, var(--accent)); }
+.t-photo .w-sheetday i { --sheet: #1c1c1e; }
+.w-sheetfoot { padding: 0 3px; text-align: center; }
+.w-sheetfoot .w-name { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.wk-photobtn .chev { flex: none; width: 8px; height: 14px; color: var(--label3, rgba(60,60,67,.3)); }

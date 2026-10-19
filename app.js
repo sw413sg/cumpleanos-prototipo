@@ -5,9 +5,29 @@
 (() => {
 'use strict';
 
+/* ---------------- Idioma ---------------- */
+// Los 10 idiomas de Ajustes → Idioma: [código, nombre en ese idioma, locale para fechas y plurales].
+// El texto en español es la clave: T('Hoy') busca 'Hoy' en el diccionario del idioma (i18n/xx.js) y, si falta, queda en español.
+// SwiftUI: String Catalog (Localizable.xcstrings) con estos mismos idiomas.
+const LANGS = [['es', 'Español', 'es-AR'], ['en', 'English', 'en-US'], ['pt', 'Português', 'pt-BR'], ['fr', 'Français', 'fr-FR'], ['it', 'Italiano', 'it-IT'],
+  ['de', 'Deutsch', 'de-DE'], ['ja', '日本語', 'ja-JP'], ['zh', '简体中文', 'zh-CN'], ['ko', '한국어', 'ko-KR'], ['ru', 'Русский', 'ru-RU']];
+let LANG = 'es';
+const LOC = () => (LANGS.find(l => l[0] === LANG) || LANGS[0])[2];
+const fill = (s, v) => v ? s.replace(/\{(\w+)\}/g, (m, k) => k in v ? v[k] : m) : s;
+const T = (s, v) => fill(LANG === 'es' ? s : ((window.I18N || {})[LANG] || {})[s] ?? s, v);
+// Plurales: TP(n, '{n} día', '{n} días'). Cada idioma traduce 'singular|plural' con sus formas
+// (una sola en japonés, chino y coreano; tres en ruso: 1 / 2-4 / 5+), según Intl.PluralRules.
+function TP(n, one, other, v) {
+  // "#edad" al final de la clave separa dos textos iguales en español que en otro idioma cambian (年 / 歳); no se muestra
+  const f = T(one + '|' + other).replace(/#\w+/g, '').split('|'), c = new Intl.PluralRules(LOC()).select(n);
+  return fill(f.length === 1 ? f[0] : f.length === 2 ? f[c === 'one' ? 0 : 1] : f[{ one: 0, few: 1 }[c] ?? 2], { n, ...v });
+}
+const fmtDate = (o, d) => new Intl.DateTimeFormat(LOC(), o).format(d);
+
 /* ---------------- Fechas (= BirthdayKit) ---------------- */
-const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const monthName = m => fmtDate({ month: 'long' }, new Date(2000, m - 1, 1));
+const MON3 = m => LANG === 'es' ? cap(monthName(m).slice(0, 3)) : cap(fmtDate({ month: 'short' }, new Date(2000, m - 1, 1)).replace('.', ''));
 const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const TODAY = startOfDay(new Date());
 const THIS_YEAR = TODAY.getFullYear();
@@ -20,15 +40,15 @@ function nextDate(m, d) {
 }
 const daysLeft = (m, d) => Math.round((nextDate(m, d) - TODAY) / 864e5);
 const turningAge = p => p.y ? nextDate(p.m, p.d).getFullYear() - p.y : null;
-const monthDay = (m, d) => `${d} de ${MONTHS[m - 1]}`;
+const monthDay = (m, d) => fmtDate({ month: 'long', day: 'numeric' }, new Date(2000, m - 1, d));
 const isRound = age => age != null && age > 0 && (age % 10 === 0 || age === 18);
 function subtitle(p) {
   const parts = [monthDay(p.m, p.d)];
   const nd = nextDate(p.m, p.d);
   const [om, od] = observed(p.m, p.d, nd.getFullYear());
-  if (om !== p.m || od !== p.d) parts.push(`se festeja el ${od}`);
+  if (om !== p.m || od !== p.d) parts.push(T('se festeja el {d}', { d: od }));
   const a = turningAge(p);
-  if (a && a > 0) parts.push(a === 1 ? 'cumple 1 año' : `cumple ${a} años`);
+  if (a && a > 0) parts.push(TP(a, 'cumple {n} año', 'cumple {n} años'));
   return parts.join(' · ');
 }
 function rel(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); return [d.getMonth() + 1, d.getDate()]; }
@@ -98,7 +118,7 @@ const appIcon = () => `<svg class="app-icon" viewBox="0 0 100 100" aria-hidden="
 const chev = () => `<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L6.5 7l-5 5.5"/></svg>`;
 const backChev = () => `<svg viewBox="0 0 13 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2.5 10.5 11 19"/></svg>`;
 const NO_ADS = { t: 'Sin publicidad', s: 'Hacemos un esfuerzo extra en mantener la app libre de ads' };
-const lockBadge = (txt = 'Unlock') => `<span class="lock-badge">${ic('lock', '', 2.4)}${txt}</span>`;
+const lockBadge = (txt = 'Unlock') => `<span class="lock-badge">${ic('lock', '', 2.4)}${T(txt)}</span>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ---------------- Datos de ejemplo ---------------- */
@@ -141,12 +161,14 @@ const CONTACTS = [
 const AGENDA = [...CONTACTS, { id: 'n1', name: 'Agus Ferreyra', photo: true }, { id: 'n2', name: 'Caro Méndez' }, { id: 'n3', name: 'Juli Sosa' }, { id: 'n4', name: 'Mati Quiroga', photo: true }, { id: 'n5', name: 'Pili Ortega' }]
   .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
-// La base de gustos (GUSTOS) está en gustos.js
+// La base de gustos del idioma: español en gustos.js, inglés en gustos-en.js (más general, sin cosas de Argentina)
+// y los demás idiomas traducen la de inglés (i18n/gustos-xx.js)
 const gNorm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-const GUSTO_LIST = GUSTOS.flatMap(([, items]) => items);
+const gustosBase = () => LANG === 'es' ? GUSTOS : (window.I18N_GUSTOS || {})[LANG] || GUSTOS_EN;
+const gustoList = () => gustosBase().flatMap(([, items]) => items);
 // Un gusto anotado ("Café de especialidad", "fulbo") encuentra su gusto de la base por nombre o sinónimo
 function gustoMatch(g) {
-  const n = gNorm(g.trim()), words = n.split(/\s+/);
+  const GUSTO_LIST = gustoList(), n = gNorm(T(g).trim()), words = n.split(/\s+/);
   const names = ([w, syn]) => [gNorm(w), ...gNorm(syn).split('|')];
   return GUSTO_LIST.find(e => names(e).includes(n)) || GUSTO_LIST.find(e => names(e).some(x => words.includes(x) || x.split(/\s+/).includes(n)));
 }
@@ -159,11 +181,11 @@ function suggestionsFor(p) {
   let seed = [...p.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
   const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
   for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
-  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [t, 'General']);
+  return out.length ? out : SUGGESTIONS_DEFAULT.map(t => [T(t), 'General']);
 }
-// Buscar la idea en Mercado Libre: abre el listado con ese texto (sin API)
-const mlUrl = what => 'https://listado.mercadolibre.com.ar/' + encodeURIComponent(gNorm(what).replace(/["“”:+]/g, '').trim().replace(/\s+/g, '-'));
-const mlBtn = what => `<a class="ml-btn" href="${mlUrl(what)}" target="_blank" rel="noopener" aria-label="Buscar en Mercado Libre">${ic('search', '', 2.4)}</a>`;
+// Buscar la idea en Mercado Libre: abre el listado con ese texto (sin API). En los otros idiomas, en Google Shopping.
+const mlUrl = what => LANG !== 'es' ? 'https://www.google.com/search?tbm=shop&q=' + encodeURIComponent(what) : 'https://listado.mercadolibre.com.ar/' + encodeURIComponent(gNorm(what).replace(/["“”:+]/g, '').trim().replace(/\s+/g, '-'));
+const mlBtn = what => `<a class="ml-btn" href="${mlUrl(what)}" target="_blank" rel="noopener" aria-label="${T('Buscar en Mercado Libre')}">${ic('search', '', 2.4)}</a>`;
 const SUGGESTIONS_DEFAULT = ['Un libro que le pueda gustar', 'Una salida juntos', 'Una planta linda con maceta', 'Algo hecho por vos, con una carta'];
 
 /* ---------------- Estado ---------------- */
@@ -172,6 +194,7 @@ const saved = (() => { try { return JSON.parse(localStorage.getItem(LS)) || {}; 
 const S = {
   unlocked: !!saved.unlocked,
   theme: saved.theme || 'system',
+  lang: LANGS.some(l => l[0] === saved.lang) ? saved.lang : 'es',
   people: saved.people || demoPeople(),
   // "Fecha del año" y "Otra" ahora son "Día especial"
   specials: (saved.specials || demoSpecials()).map(x => x.kind === 'Fecha del año' || x.kind === 'Otra' ? { ...x, kind: 'Día especial' } : x),
@@ -188,8 +211,9 @@ const S = {
   listView: saved.listView || 'list', calY: TODAY.getFullYear(), calM: TODAY.getMonth() + 1, calD: null,
   pushed: false,
 };
+LANG = S.lang;
 function persist() {
-  try { localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, wcfg: S.wcfg, pins: S.pins, pinMax: S.pinMax, listView: S.listView })); } catch { console.warn('No hay lugar para guardar'); }
+  try { localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, lang: S.lang, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, wcfg: S.wcfg, pins: S.pins, pinMax: S.pinMax, listView: S.listView })); } catch { console.warn('No hay lugar para guardar'); }
 }
 const person = id => S.people.find(p => p.id === id);
 const gradFor = id => GRADS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
@@ -208,7 +232,7 @@ function push(scr) { stack().push(scr); S.pushed = true; render(); }
 function pop() { if (stack().length > 1) stack().pop(); render(); }
 function present(o) { o.fresh = true; S.overlays.push(o); render(); }
 function dismiss() { S.overlays.pop(); render(); }
-function toast(msg, emoji = '✅') { S.toast = { msg, emoji, fresh: true }; render(); clearTimeout(toast.t); toast.t = setTimeout(() => { S.toast = null; render(); }, 2200); }
+function toast(msg, emoji = '✅') { S.toast = { msg: T(msg), emoji, fresh: true }; render(); clearTimeout(toast.t); toast.t = setTimeout(() => { S.toast = null; render(); }, 2200); }
 function needUnlock(feature) { if (S.unlocked) return false; present({ s: 'paywall', feature }); return true; }
 
 /* ---------------- Componentes ---------------- */
@@ -226,11 +250,11 @@ function navRow({ icon, color, title, value = '', a, extra = '', badge = '', sub
 function countParts(n) {
   const t = new Date(TODAY); t.setDate(t.getDate() + n);
   const months = (t.getFullYear() - TODAY.getFullYear()) * 12 + t.getMonth() - TODAY.getMonth() - (t.getDate() < TODAY.getDate() ? 1 : 0);
-  if (months >= 2) return [`+${months}`, 'meses'];
-  return [String(n), n === 1 ? 'día' : 'días'];
+  if (months >= 2) return [`+${months}`, TP(months, 'mes', 'meses')];
+  return [String(n), TP(n, 'día', 'días')];
 }
 function countdown(n) {
-  if (n === 0) return `<div class="countdown today">Hoy</div>`;
+  if (n === 0) return `<div class="countdown today">${T('Hoy')}</div>`;
   const [a, u] = countParts(n);
   return `<div class="countdown"><div class="n">${a}</div><div class="u">${u}</div></div>`;
 }
@@ -253,13 +277,13 @@ function spPattern(sp) {
 }
 function personRow(p) {
   const n = daysLeft(p.m, p.d), age = turningAge(p);
-  const badges = (isRound(age) && S.rem.round ? `<span class="badge round">🎉 ${age}</span> ` : '') + (p.work && S.unlocked ? `<span class="badge work">Trabajo</span>` : '');
+  const badges = (isRound(age) && S.rem.round ? `<span class="badge round">🎉 ${age}</span> ` : '') + (p.work && S.unlocked ? `<span class="badge work">${T('Trabajo')}</span>` : '');
   return `<button class="row person" data-a="open" data-id="${p.id}">${cakeIcon(p)}<span class="grow"><div class="title-semibold">${esc(p.name)} ${badges}</div><div class="sub">${esc(subtitle(p))}</div></span>${countdown(n)}</button>`;
 }
 function specialRow(sp) {
   const n = daysLeft(sp.m, sp.d);
   const yrs = sp.y ? nextDate(sp.m, sp.d).getFullYear() - sp.y : null;
-  return `<button class="row person" data-a="openSpecial" data-id="${sp.id}">${spIcon(sp)}<span class="grow"><div class="title-semibold">${esc(sp.name)} <span class="badge special">${esc(sp.kind)}</span></div><div class="sub">${monthDay(sp.m, sp.d)}${yrs ? ` · ${yrs} años` : ''}</div></span>${countdown(n)}</button>`;
+  return `<button class="row person" data-a="openSpecial" data-id="${sp.id}">${spIcon(sp)}<span class="grow"><div class="title-semibold">${esc(T(sp.name))} <span class="badge special">${esc(T(sp.kind))}</span></div><div class="sub">${monthDay(sp.m, sp.d)}${yrs ? ` · ${TP(yrs, '{n} año', '{n} años')}` : ''}</div></span>${countdown(n)}</button>`;
 }
 
 /* ---------------- Pantallas: Cumpleaños ---------------- */
@@ -280,41 +304,41 @@ function screenList() {
 
   let body = '';
   if (!S.people.length) {
-    body = `<div class="empty">${ic('gift')}<h3>Sin cumpleaños</h3><p>Agregá una persona o importá los cumpleaños que ya están en Contactos.</p><button class="btn-link" data-a="add">Agregar persona</button><button class="btn-link" data-a="import">Importar contactos</button></div>`;
+    body = `<div class="empty">${ic('gift')}<h3>${T('Sin cumpleaños')}</h3><p>${T('Agregá una persona o importá los cumpleaños que ya están en Contactos.')}</p><button class="btn-link" data-a="add">${T('Agregar persona')}</button><button class="btn-link" data-a="import">${T('Importar contactos')}</button></div>`;
   } else {
-    if (S.listView === 'list') body += `<label class="search">${ic('search', '', 2.2)}<input id="search" type="search" placeholder="Buscar" value="${esc(S.search)}" autocomplete="off"></label>`;
+    if (S.listView === 'list') body += `<label class="search">${ic('search', '', 2.2)}<input id="search" type="search" placeholder="${T('Buscar')}" value="${esc(S.search)}" autocomplete="off"></label>`;
     body += `<div class="segmented">
-      <button class="${S.listMode === 'all' ? 'sel' : ''}" data-a="listMode" data-v="all">Todos</button>
-      <button class="${S.listMode === 'birthdays' ? 'sel' : ''}" data-a="listMode" data-v="birthdays">Cumpleaños</button>
-      <button class="${S.listMode === 'specials' ? 'sel' : ''}" data-a="listMode" data-v="specials">Fechas${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
+      <button class="${S.listMode === 'all' ? 'sel' : ''}" data-a="listMode" data-v="all">${T('Todos')}</button>
+      <button class="${S.listMode === 'birthdays' ? 'sel' : ''}" data-a="listMode" data-v="birthdays">${T('Cumpleaños')}</button>
+      <button class="${S.listMode === 'specials' ? 'sel' : ''}" data-a="listMode" data-v="specials">${T('Fechas')}${S.unlocked ? '' : ic('lock', '', 2.6)}</button></div>`;
     if (S.listView === 'calendar') body += calendarBody();
     else {
       if (today.length && !q && S.listMode !== 'specials') {
         const t = today[0], age = turningAge(t);
-        body += `<button class="hero" data-a="open" data-id="${t.id}"><div class="confetti"></div>${avatar(t)}<div><div class="t1">🎂 Hoy es el cumple de</div><div class="t2">${esc(t.name)}</div><div class="t3">${age ? `Cumple ${age} años · ` : ''}Mandale un mensaje</div></div></button>`;
+        body += `<button class="hero" data-a="open" data-id="${t.id}"><div class="confetti"></div>${avatar(t)}<div><div class="t1">🎂 ${T('Hoy es el cumple de')}</div><div class="t2">${esc(t.name)}</div><div class="t3">${age ? `${TP(age, 'Cumple {n} año', 'Cumple {n} años')} · ` : ''}${T('Mandale un mensaje')}</div></div></button>`;
       }
       const spToday = S.listMode === 'birthdays' || q ? [] : specials.filter(sp => daysLeft(sp.m, sp.d) === 0);
       if (spToday.length) {
         const sp = spToday[0], yrs = sp.y ? TODAY.getFullYear() - sp.y : null;
-        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}">${spPattern(sp)}<div class="avatar glyph">${ic(spIc(sp), '', 2)}</div><div><div class="t1">Hoy es</div><div class="t2">${esc(sp.name)}</div><div class="t3">${esc(sp.kind)}${yrs ? ` · ${yrs} ${yrs === 1 ? 'año' : 'años'}` : ''}</div></div></button>`;
+        body += `<button class="hero special" data-a="openSpecial" data-id="${sp.id}">${spPattern(sp)}<div class="avatar glyph">${ic(spIc(sp), '', 2)}</div><div><div class="t1">${T('Hoy es')}</div><div class="t2">${esc(T(sp.name))}</div><div class="t3">${esc(T(sp.kind))}${yrs ? ` · ${TP(yrs, '{n} año', '{n} años')}` : ''}</div></div></button>`;
       }
-      if (soon.length) body += section(soon.map(rowOf).join(''), { header: 'Próximos 30 días' });
-      if (later.length) body += section(later.map(rowOf).join(''), { header: 'Más adelante' });
-      if (workPeople.length) body += section(workPeople.map(personRow).join(''), { header: 'Trabajo', footer: 'Modo trabajo: tus contactos laborales separados, con notas. Lo cambiás en Ajustes.' });
-      if (!all.length && !workPeople.length) body += `<div class="empty">${ic('search')}<h3>Sin resultados</h3><p>No hay nadie que se llame “${esc(S.search)}”.</p></div>`;
+      if (soon.length) body += section(soon.map(rowOf).join(''), { header: T('Próximos 30 días') });
+      if (later.length) body += section(later.map(rowOf).join(''), { header: T('Más adelante') });
+      if (workPeople.length) body += section(workPeople.map(personRow).join(''), { header: T('Trabajo'), footer: T('Modo trabajo: tus contactos laborales separados, con notas. Lo cambiás en Ajustes.') });
+      if (!all.length && !workPeople.length) body += `<div class="empty">${ic('search')}<h3>${T('Sin resultados')}</h3><p>${T('No hay nadie que se llame “{q}”.', { q: esc(S.search) })}</p></div>`;
       if (!S.unlocked && S.listMode === 'all' && !q) {
-        body += section(`<button class="row has-icon" data-a="paywall" data-f="specials"><span class="icon-sq" style="background:#af52de">${ic('heart', '', 2)}</span><span class="grow">Fechas especiales<div class="sub">Casamientos, aniversarios, Día de la Madre y más</div></span>${lockBadge()}</button>`);
+        body += section(`<button class="row has-icon" data-a="paywall" data-f="specials"><span class="icon-sq" style="background:#af52de">${ic('heart', '', 2)}</span><span class="grow">${T('Fechas especiales')}<div class="sub">${T('Casamientos, aniversarios, Día de la Madre y más')}</div></span>${lockBadge()}</button>`);
       }
     }
   }
-  return `<div class="screen" data-key="list">${navbar({ right: `<button class="navbtn" data-a="listView" aria-label="${S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario'}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="Agregar persona">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
+  return `<div class="screen" data-key="list">${navbar({ right: `<button class="navbtn" data-a="listView" aria-label="${T(S.listView === 'calendar' ? 'Ver como lista' : 'Ver como calendario')}">${ic(S.listView === 'calendar' ? 'listBullet' : 'calendar', '', 2)}</button><button class="navbtn" data-a="add" aria-label="${T('Agregar persona')}">${ic('plus', '', 2.2)}</button>` })}<div class="scroll" data-key="list-scroll"><div class="large-title">Unforgettables</div>${body}</div></div>`;
 }
 
 // Vista calendario de la lista (SwiftUI: LazyVGrid de 7 columnas + List del día elegido)
-const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+// Lunes a domingo: abreviados (Lun) o una letra (L). 1/1/2024 fue lunes.
+const weekdays = (weekday = 'short') => Array.from({ length: 7 }, (_, i) => LANG === 'es' && weekday === 'short' ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][i] : cap(fmtDate({ weekday }, new Date(2024, 0, 1 + i)).replace('.', '')));
 // Forma detrás del número: torta = cumpleaños, corazón = fecha especial (SwiftUI: Shape propia)
 const CAL_CAKE = '<svg class="shape" viewBox="0 0 40 40" aria-hidden="true"><path class="flame" d="M20 1.5c1.6 1.7 1.6 3.3 0 4.5-1.6-1.2-1.6-2.8 0-4.5z"/><path d="M20 6.5v3.5"/><path d="M8 10h24a3.5 3.5 0 013.5 3.5V31H4.5V13.5A3.5 3.5 0 018 10z"/><path d="M4.5 13.5q2.6 3 5.2 0t5.2 0 5.2 0 5.2 0 5.2 0 5.2 0"/><path d="M2.5 31h35"/></svg>';
-const DAYNAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 function calendarItems(y, m) {
   // Qué se festeja cada día de ese mes (el 29/2 cae el 28 en años no bisiestos)
   const byDay = {};
@@ -335,22 +359,22 @@ function calendarBody() {
     const items = byDay[d] || [], wknd = (lead + d - 1) % 7 >= 5;
     const cls = ['cal-day', wknd ? 'wknd' : '', isThisMonth && d === TODAY.getDate() ? 'today' : '', d === S.calD ? 'sel' : '', items.some(it => it.p) ? 'has' : items.length ? 'has-sp' : ''].join(' ');
     const shape = items.some(it => it.p) ? CAL_CAKE : items.length ? `<span class="cal-emo">${ic(spIc(items[0].sp), '', 2.2)}</span>` : '';
-    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${d} de ${MONTHS[m - 1]}${items.length ? `, ${items.length} ${items.length === 1 ? 'fecha' : 'fechas'}` : ''}">${shape}<span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? '<span class="hoy">Hoy</span>' : ''}</button>`;
+    cells += `<button class="${cls}" data-a="calDay" data-d="${d}" aria-label="${monthDay(m, d)}${items.length ? `, ${TP(items.length, '{n} fecha', '{n} fechas')}` : ''}">${shape}<span class="n">${d}</span>${isThisMonth && d === TODAY.getDate() ? `<span class="hoy">${T('Hoy')}</span>` : ''}</button>`;
   }
   const total = Object.values(byDay).flat().filter(it => it.p).length;
-  let h = `<div class="cal"><div class="cal-head"><button class="cal-arrow" data-a="calMove" data-v="-1" aria-label="Mes anterior">${ic('back', '', 2.4)}</button><div class="cal-title"><div class="m">${cap(MONTHS[m - 1])}</div><div class="y">${y}</div></div><button class="cal-arrow" data-a="calMove" data-v="1" aria-label="Mes siguiente">${ic('back', 'flip', 2.4)}</button></div>`;
-  h += `<div class="cal-grid">${WEEKDAYS.map((w, i) => `<span class="cal-wd ${i >= 5 ? 'wknd' : ''}">${w}</span>`).join('')}${cells}</div>`;
-  h += `<div class="cal-foot">${total ? `${total} ${total === 1 ? 'cumpleaños' : 'cumpleaños'} en ${MONTHS[m - 1]}` : `Nadie cumple en ${MONTHS[m - 1]}`}${isThisMonth ? '' : ` · <button data-a="calToday">Ir a hoy</button>`}</div></div>`;
+  let h = `<div class="cal"><div class="cal-head"><button class="cal-arrow" data-a="calMove" data-v="-1" aria-label="${T('Mes anterior')}">${ic('back', '', 2.4)}</button><div class="cal-title"><div class="m">${cap(monthName(m))}</div><div class="y">${y}</div></div><button class="cal-arrow" data-a="calMove" data-v="1" aria-label="${T('Mes siguiente')}">${ic('back', 'flip', 2.4)}</button></div>`;
+  h += `<div class="cal-grid">${weekdays().map((w, i) => `<span class="cal-wd ${i >= 5 ? 'wknd' : ''}">${w}</span>`).join('')}${cells}</div>`;
+  h += `<div class="cal-foot">${total ? TP(total, '{n} cumpleaños en {mes}', '{n} cumpleaños en {mes}', { mes: monthName(m) }) : T('Nadie cumple en {mes}', { mes: monthName(m) })}${isThisMonth ? '' : ` · <button data-a="calToday">${T('Ir a hoy')}</button>`}</div></div>`;
   const sel = S.calD && S.calD <= days ? S.calD : null;
   if (sel) {
     const items = byDay[sel] || [], dt = new Date(y, m - 1, sel);
-    const header = `${DAYNAMES[dt.getDay()]} ${sel} de ${MONTHS[m - 1]}`;
+    const header = LANG === 'es' ? fmtDate({ weekday: 'long', day: 'numeric', month: 'long' }, dt).replace(',', '') : fmtDate({ weekday: 'long', day: 'numeric', month: 'long' }, dt);
     h += items.length ? section(items.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header })
-      : section(`<button class="row accent" data-a="addOnDay">${ic('plus', 'check', 2.2)}Agregar un cumple este día</button>`, { header, footer: 'Nadie cumple este día.' });
-    h += `<div style="text-align:center;margin:-14px 0 24px"><button class="navbtn" data-a="calDay" data-d="${sel}">Ver todo ${MONTHS[m - 1]}</button></div>`;
+      : section(`<button class="row accent" data-a="addOnDay">${ic('plus', 'check', 2.2)}${T('Agregar un cumple este día')}</button>`, { header, footer: T('Nadie cumple este día.') });
+    h += `<div style="text-align:center;margin:-14px 0 24px"><button class="navbtn" data-a="calDay" data-d="${sel}">${T('Ver todo {mes}', { mes: monthName(m) })}</button></div>`;
   } else {
     const all = Object.keys(byDay).map(Number).sort((a, b) => a - b).flatMap(d => byDay[d]);
-    if (all.length) h += section(all.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header: `Todo ${MONTHS[m - 1]}`, footer: 'Tocá un día para ver solo ese.' });
+    if (all.length) h += section(all.map(it => it.p ? personRow(it.p) : specialRow(it.sp)).join(''), { header: T('Todo {mes}', { mes: monthName(m) }), footer: T('Tocá un día para ver solo ese.') });
   }
   return h;
 }
@@ -359,65 +383,65 @@ function calendarBody() {
 function giftBox(p) {
   const first = esc(p.name.split(' ')[0]);
   const head = (icon, bg, t, s, extra = '') => `<div class="gb-head"><span class="gb-ic" style="background:${bg}">${ic(icon, '', 2.2)}</span><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div>${extra}</div>`;
-  const add = (a, label, extra = '') => `<button class="gb-add" data-a="${a}" data-id="${p.id}" ${extra}>${ic('plus', '', 2.6)}${label}</button>`;
+  const add = (a, label, extra = '') => `<button class="gb-add" data-a="${a}" data-id="${p.id}" ${extra}>${ic('plus', '', 2.6)}${T(label)}</button>`;
   // 1. Gustos
-  let h = `<div class="gb-block">${head('heart', 'linear-gradient(160deg,#ff8a95,#e23d4a)', 'Le gusta', p.gustos.length ? 'Con esto armamos las ideas.' : 'Elegí de la lista o escribí lo tuyo.')}
-    <div class="gb-chips">${p.gustos.map(g => `<span>${esc(g)}</span>`).join('')}${add('addGusto', p.gustos.length ? 'Gusto' : 'Agregar gustos')}</div></div>`;
+  let h = `<div class="gb-block">${head('heart', 'linear-gradient(160deg,#ff8a95,#e23d4a)', T('Le gusta'), T(p.gustos.length ? 'Con esto armamos las ideas.' : 'Elegí de la lista o escribí lo tuyo.'))}
+    <div class="gb-chips">${p.gustos.map(g => `<span>${esc(T(g))}</span>`).join('')}${add('addGusto', p.gustos.length ? 'Gusto' : 'Agregar gustos')}</div></div>`;
   // 2. Ideas (Unlock): las guardadas y las sugeridas por sus gustos
   if (S.unlocked) {
-    const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => i.what === w) && !p.gifts.some(g => similar(g.what, w))).slice(0, 2);
-    h += `<div class="gb-block">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', 'Guardá lo que se te ocurra, o una de las sugeridas.')}
-      ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(i.what)}<div class="s">${esc(i.src || 'Idea guardada')}</div></span>${mlBtn(i.what)}</div>`).join('')}
-      ${sug.length ? `<div class="gb-label">${ic('sparkles', '', 2)}Sugerencias por los gustos que seleccionaste</div>` : ''}${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">Sugerida porque le gusta ${esc(why)}</div></span>${mlBtn(w)}<button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">Guardar</button></div>`).join('')}
-      <div class="gb-actions">${add('addIdea', 'Idea')}<button class="gb-link" data-a="suggest" data-id="${p.id}">Ver más sugerencias${chev()}</button></div></div>`;
+    const sug = suggestionsFor(p).filter(([w]) => !p.ideas.some(i => T(i.what) === w) && !p.gifts.some(g => similar(T(g.what), w))).slice(0, 2);
+    h += `<div class="gb-block">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', T('Ideas'), T('Guardá lo que se te ocurra, o una de las sugeridas.'))}
+      ${p.ideas.map(i => `<div class="gb-row"><span class="grow">${esc(T(i.what))}<div class="s">${esc(T(i.src || 'Idea guardada'))}</div></span>${mlBtn(T(i.what))}</div>`).join('')}
+      ${sug.length ? `<div class="gb-label">${ic('sparkles', '', 2)}${T('Sugerencias por los gustos que seleccionaste')}</div>` : ''}${sug.map(([w, why]) => `<div class="gb-row sug"><span class="gb-spark">${ic('sparkles', '', 2)}</span><span class="grow">${esc(w)}<div class="s">${T('Sugerida porque le gusta {g}', { g: esc(T(why)) })}</div></span>${mlBtn(w)}<button class="gb-save" data-a="saveSuggestion" data-id="${p.id}" data-what="${esc(w)}">${T('Guardar')}</button></div>`).join('')}
+      <div class="gb-actions">${add('addIdea', 'Idea')}<button class="gb-link" data-a="suggest" data-id="${p.id}">${T('Ver más sugerencias')}${chev()}</button></div></div>`;
   } else {
-    h += `<button class="gb-block gb-locked" data-a="paywall" data-f="ideas">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', 'Ideas', `Guardá ideas y recibí sugerencias según lo que le gusta a ${first}.`, lockBadge())}</button>`;
+    h += `<button class="gb-block gb-locked" data-a="paywall" data-f="ideas">${head('bulb', 'linear-gradient(160deg,#ffc061,#ff9500)', T('Ideas'), T('Guardá ideas y recibí sugerencias según lo que le gusta a {name}.', { name: first }), lockBadge())}</button>`;
   }
   // 3. Lo que ya le regalaste
   const gifts = [...p.gifts].sort((a, b) => b.year - a.year);
-  h += `<div class="gb-block">${head('gift', 'linear-gradient(160deg,#c86dd7,#af52de)', 'Ya se lo regalaste', 'Si vas a repetir, te avisamos.')}
-    ${gifts.map(g => `<div class="gb-row"><span class="grow">${esc(g.what)}</span><span class="gb-year">${g.year}</span></div>`).join('')}
+  h += `<div class="gb-block">${head('gift', 'linear-gradient(160deg,#c86dd7,#af52de)', T('Ya se lo regalaste'), T('Si vas a repetir, te avisamos.'))}
+    ${gifts.map(g => `<div class="gb-row"><span class="grow">${esc(T(g.what))}</span><span class="gb-year">${g.year}</span></div>`).join('')}
     <div class="gb-actions">${add('addGift', 'Anotar regalo')}</div></div>`;
-  return `<div class="section" id="regalos"><div class="section-header big">Regalos para ${first}</div><div class="gb">${h}</div></div>`;
+  return `<div class="section" id="regalos"><div class="section-header big">${T('Regalos para {name}', { name: first })}</div><div class="gb">${h}</div></div>`;
 }
 function screenDetail(id) {
   const p = person(id); if (!p) return screenList();
   const n = daysLeft(p.m, p.d), age = turningAge(p);
   let h = `<div class="detail-head">${avatar(p, 'lg')}<h2>${esc(p.name)}</h2><div class="sub">${esc(subtitle(p))}</div></div>`;
-  h += `<div class="stats"><div class="stat"><div class="n ${n === 0 ? 'accent' : ''}">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 0 ? '¡es su cumple!' : n === 1 ? 'día' : 'días'}</div></div><div class="stat"><div class="n">${age ?? '–'}</div><div class="l">${age ? 'años cumple' : 'sin año'}</div></div></div>`;
-  h += `<div class="quick"><button data-a="fake" data-msg="Abriría WhatsApp con un saludo armado">${ic('message')}Saludar</button><button data-a="fake" data-msg="Abriría el teléfono para llamar">${ic('phone')}Llamar</button><button data-a="toGifts">${ic('gift')}Regalo</button></div>`;
+  h += `<div class="stats"><div class="stat"><div class="n ${n === 0 ? 'accent' : ''}">${n === 0 ? T('Hoy') : n}</div><div class="l">${n === 0 ? T('¡es su cumple!') : TP(n, 'día', 'días')}</div></div><div class="stat"><div class="n">${age ?? '–'}</div><div class="l">${age ? TP(age, 'año cumple', 'años cumple') : T('sin año')}</div></div></div>`;
+  h += `<div class="quick"><button data-a="fake" data-msg="Abriría WhatsApp con un saludo armado">${ic('message')}${T('Saludar')}</button><button data-a="fake" data-msg="Abriría el teléfono para llamar">${ic('phone')}${T('Llamar')}</button><button data-a="toGifts">${ic('gift')}${T('Regalo')}</button></div>`;
   if (isRound(age) && S.rem.round) {
-    const roundTxt = S.rem.roundBefore === 30 ? '1 mes' : S.rem.roundBefore === 60 ? '2 meses' : '2 semanas';
-    h += `<div class="banner"><div class="emoji">🎉</div><div><div class="t">¡Cumple ${age}! Es un cumple redondo</div><div class="s">Te avisamos ${roundTxt} antes para que organices algo grande.</div></div></div>`;
+    const roundTxt = T(S.rem.roundBefore === 30 ? '1 mes' : S.rem.roundBefore === 60 ? '2 meses' : '2 semanas');
+    h += `<div class="banner"><div class="emoji">🎉</div><div><div class="t">${T('¡Cumple {n}! Es un cumple redondo', { n: age })}</div><div class="s">${T('Te avisamos {t} antes para que organices algo grande.', { t: roundTxt })}</div></div></div>`;
   }
   // Recordatorio
-  const remTxt = p.remind == null ? `${beforeLabel(S.rem.before)} (general)` : beforeLabel(p.remind);
-  let rem = navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: esc(remTxt), a: 'remindPerson', extra: `data-id="${p.id}"` });
-  rem += `<button class="row has-icon" data-a="tzPerson" data-id="${p.id}"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">A la hora de su país</span>${S.unlocked ? `<span class="value">${p.tz ? esc(p.tz) : 'Igual que vos'}</span>${chev()}` : lockBadge()}</button>`;
+  const remTxt = p.remind == null ? T('{x} (general)', { x: beforeLabel(S.rem.before) }) : beforeLabel(p.remind);
+  let rem = navRow({ icon: 'bell', color: '#ff3b30', title: T('Aviso'), value: esc(remTxt), a: 'remindPerson', extra: `data-id="${p.id}"` });
+  rem += `<button class="row has-icon" data-a="tzPerson" data-id="${p.id}"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">${T('A la hora de su país')}</span>${S.unlocked ? `<span class="value">${p.tz ? esc(T(p.tz)) : T('Igual que vos')}</span>${chev()}` : lockBadge()}</button>`;
   h += pinRow('p', p.id);
-  h += section(rem, { header: 'Recordatorio', footer: p.tz && S.unlocked ? `${esc(p.name.split(' ')[0])} vive en ${esc(p.tz)}: el aviso del día te llega cuando allá ya es su cumple.` : '' });
+  h += section(rem, { header: T('Recordatorio'), footer: p.tz && S.unlocked ? T('{name} vive en {tz}: el aviso del día te llega cuando allá ya es su cumple.', { name: esc(p.name.split(' ')[0]), tz: esc(T(p.tz)) }) : '' });
   // Regalos: gustos, ideas y lo que ya le regalaste, todo junto (el botón Regalo de arriba trae acá)
   h += giftBox(p);
-  if (p.notes && (!p.work || S.unlocked)) h += section(`<div class="row"><span class="grow" style="font-style:italic;opacity:.55">${esc(p.notes)}</span></div>`, { header: p.work ? 'Notas · Trabajo' : 'Notas' });
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}" data-key="detail">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="edit" data-id="${p.id}">Editar</button>`, blur: true })}<div class="scroll" data-key="detail-${p.id}">${h}</div></div>`;
+  if (p.notes && (!p.work || S.unlocked)) h += section(`<div class="row"><span class="grow" style="font-style:italic;opacity:.55">${esc(T(p.notes))}</span></div>`, { header: T(p.work ? 'Notas · Trabajo' : 'Notas') });
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}" data-key="detail">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="edit" data-id="${p.id}">${T('Editar')}</button>`, blur: true })}<div class="scroll" data-key="detail-${p.id}">${h}</div></div>`;
 }
 // Fila "Mostrar en un widget" del detalle de una persona o una fecha
 function pinRow(k, id) {
   const pin = S.pins.find(x => x.k === k && x.id === id);
-  return section(navRow({ icon: 'widgets', color: '#ff9500', title: 'Mostrar en un widget', value: S.unlocked && pin ? pinStyleName(pin.style) : '', badge: S.unlocked ? '' : lockBadge(), a: 'pin', extra: `data-k="${k}" data-id="${id}"` }), { header: 'Widget' });
+  return section(navRow({ icon: 'widgets', color: '#ff9500', title: T('Mostrar en un widget'), value: S.unlocked && pin ? pinStyleName(pin.style) : '', badge: S.unlocked ? '' : lockBadge(), a: 'pin', extra: `data-k="${k}" data-id="${id}"` }), { header: T('Widget') });
 }
-const beforeLabel = n => n === 0 ? 'Solo el mismo día' : n === 1 ? '1 día antes' : n === 7 ? '1 semana antes' : n === 14 ? '2 semanas antes' : `${n} días antes`;
+const beforeLabel = n => n === 0 ? T('Solo el mismo día') : n === 7 ? T('1 semana antes') : n === 14 ? T('2 semanas antes') : TP(n, '{n} día antes', '{n} días antes');
 
 function screenSpecial(id) {
   const sp = S.specials.find(s => s.id === id);
   const n = daysLeft(sp.m, sp.d);
-  let h = `<div class="detail-head">${spIcon(sp, 'lg')}<h2>${esc(sp.name)}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(sp.kind)}</div></div>`;
-  h += `<div class="stats"><div class="stat"><div class="n">${n === 0 ? 'Hoy' : n}</div><div class="l">${n === 1 ? 'día' : 'días'}</div></div>${sp.y ? `<div class="stat"><div class="n">${nextDate(sp.m, sp.d).getFullYear() - sp.y}</div><div class="l">años</div></div>` : ''}</div>`;
-  h += section(navRow({ icon: 'calendar', color: '#af52de', title: 'Cuándo es', value: monthDay(sp.m, sp.d), a: 'editSpecial', extra: `data-id="${sp.id}"` }), { header: 'Fecha' });
+  let h = `<div class="detail-head">${spIcon(sp, 'lg')}<h2>${esc(T(sp.name))}</h2><div class="sub">${monthDay(sp.m, sp.d)} · ${esc(T(sp.kind))}</div></div>`;
+  h += `<div class="stats"><div class="stat"><div class="n">${n === 0 ? T('Hoy') : n}</div><div class="l">${TP(n, 'día', 'días')}</div></div>${sp.y ? `<div class="stat"><div class="n">${nextDate(sp.m, sp.d).getFullYear() - sp.y}</div><div class="l">${TP(nextDate(sp.m, sp.d).getFullYear() - sp.y, 'año', 'años')}</div></div>` : ''}</div>`;
+  h += section(navRow({ icon: 'calendar', color: '#af52de', title: T('Cuándo es'), value: monthDay(sp.m, sp.d), a: 'editSpecial', extra: `data-id="${sp.id}"` }), { header: T('Fecha') });
   h += pinRow('sp', sp.id);
-  h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Aviso', value: `${beforeLabel(S.rem.before)} (general)`, a: 'fake', extra: 'data-msg="Mismo selector que en cada persona"' }), { header: 'Recordatorio' });
-  h += section(`<button class="row destructive" data-a="fake" data-msg="Se eliminaría la fecha">Eliminar fecha</button>`);
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="editSpecial" data-id="${sp.id}">Editar</button>`, blur: true })}<div class="scroll">${h}</div></div>`;
+  h += section(navRow({ icon: 'bell', color: '#ff3b30', title: T('Aviso'), value: T('{x} (general)', { x: beforeLabel(S.rem.before) }), a: 'fake', extra: 'data-msg="Mismo selector que en cada persona"' }), { header: T('Recordatorio') });
+  h += section(`<button class="row destructive" data-a="fake" data-msg="Se eliminaría la fecha">${T('Eliminar fecha')}</button>`);
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Unforgettables'), right: `<button class="navbtn" data-a="editSpecial" data-id="${sp.id}">${T('Editar')}</button>`, blur: true })}<div class="scroll">${h}</div></div>`;
 }
 
 function screenSuggest(id) {
@@ -425,16 +449,16 @@ function screenSuggest(id) {
   const list = suggestionsFor(p);
   const given = p.gifts.map(g => g.what.toLowerCase());
   const rows = list.map(([what, why]) => {
-    const prev = p.gifts.find(g => similar(g.what, what));
-    const savedIdea = p.ideas.some(x => x.what === what);
-    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">Porque le gusta: ${esc(why)}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ Ya se lo regalaste en ${prev.year}</div>` : ''}</span>${mlBtn(what)}<button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${savedIdea ? 'Guardada' : 'Guardar'}</button></div>`;
+    const prev = p.gifts.find(g => similar(T(g.what), what));
+    const savedIdea = p.ideas.some(x => T(x.what) === what);
+    return `<div class="row" style="align-items:flex-start"><span class="icon-sq" style="background:#ff9500;margin-top:2px">${ic('sparkles', '', 2)}</span><span class="grow"><div style="font-weight:500">${esc(what)}</div><div class="sub">${T('Porque le gusta: {g}', { g: esc(T(why)) })}</div>${prev ? `<div class="sub" style="color:var(--orange);font-weight:500">⚠︎ ${T('Ya se lo regalaste en {y}', { y: prev.year })}</div>` : ''}</span>${mlBtn(what)}<button class="navbtn" style="min-height:30px;font-size:15px" data-a="saveSuggestion" data-id="${id}" data-what="${esc(what)}" ${savedIdea ? 'disabled' : ''}>${T(savedIdea ? 'Guardada' : 'Guardar')}</button></div>`;
   }).join('');
-  const h = `<div class="large-title" style="font-size:28px;line-height:34px">Sugerencias</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">Sugerencias por los gustos que seleccionaste${ageGroup(p) ? ` y que cumple ${turningAge(p)}` : ''}.</div>` +
-    section(rows, { cls: '', footer: 'Con la lupa buscás cada idea en Mercado Libre.' });
+  const h = `<div class="large-title" style="font-size:28px;line-height:34px">${T('Sugerencias')}</div><div class="section-footer" style="padding:0 16px 16px;margin-top:-4px">${ageGroup(p) ? T('Sugerencias por los gustos que seleccionaste y que cumple {n}.', { n: turningAge(p) }) : T('Sugerencias por los gustos que seleccionaste.')}</div>` +
+    section(rows, { cls: '', footer: T('Con la lupa buscás cada idea en Mercado Libre.') });
   return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(p.name.split(' ')[0]), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function similar(a, b) {
-  const words = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9ñ]+/).filter(w => w.length >= 4 && !['para', 'con', 'desde', 'clase'].includes(w));
+  const words = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4 && !['para', 'con', 'desde', 'clase'].includes(w));
   const wa = words(a), wb = words(b); const shared = wb.filter(w => wa.includes(w)).length;
   return shared > 0 && shared >= Math.min(2, wa.length, wb.length);
 }
@@ -461,11 +485,13 @@ const photoLayer = ph => `<div class="w-photo" style="${photoStyle(ph)}"></div><
 // Selector de color y de fondo (pestaña Widgets y hoja "Mostrar en un widget")
 function colorPicker(cur, tone, a, autoName = 'Automático', autoColor = null, photo = null) {
   const isPhoto = cur === 'photo' && photo;
-  const photoRow = `<div class="wk-photo ${isPhoto ? 'sel' : ''}"><button class="wk-photobtn" data-a="bgPhoto"><span class="thumb" ${photo ? `style="background-image:url(${photo.src})"` : ''}>${photo ? '' : ic('photo', '', 2)}</span><span class="grow"><b>Foto</b><span class="s">${isPhoto ? 'Es el fondo de este widget' : photo ? 'Tocá para usarla de fondo' : 'Elegí una foto de tu iPhone'}</span></span>${photo ? '' : chev()}</button>` +
-    (isPhoto ? `<div class="wk-photoacts"><button data-a="bgPhotoAdjust">${ic('crop', '', 2)}Ajustar</button><button data-a="bgPhotoNew">${ic('photo', '', 2)}Cambiar foto</button></div>` : '') + `</div>`;
-  return `<div class="wk-swatches">${THEMES.map(([k, name, c]) => `<button class="${cur === k ? 'sel' : ''}" data-a="${a}" data-v="${k}"><span style="background:${swatchBg(k, k === 'classic' ? autoColor : c)}"></span>${k === 'classic' ? autoName : name}</button>`).join('')}</div>` + photoRow +
-    (isPhoto || cur === 'classic' && autoName === 'Automático' ? '' : `<div class="segmented wk-tone"><button class="${tone !== 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="grad">Degradé</button><button class="${tone === 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="soft">Suave</button></div>`);
+  const photoRow = `<div class="wk-photo ${isPhoto ? 'sel' : ''}"><button class="wk-photobtn" data-a="bgPhoto"><span class="thumb" ${photo ? `style="background-image:url(${photo.src})"` : ''}>${photo ? '' : ic('photo', '', 2)}</span><span class="grow"><b>${T('Foto')}</b><span class="s">${T(isPhoto ? 'Es el fondo de este widget' : photo ? 'Tocá para usarla de fondo' : 'Elegí una foto de tu iPhone')}</span></span>${photo ? '' : chev()}</button>` +
+    (isPhoto ? `<div class="wk-photoacts"><button data-a="bgPhotoAdjust">${ic('crop', '', 2)}${T('Ajustar')}</button><button data-a="bgPhotoNew">${ic('photo', '', 2)}${T('Cambiar foto')}</button></div>` : '') + `</div>`;
+  return `<div class="wk-swatches">${THEMES.map(([k, name, c]) => `<button class="${cur === k ? 'sel' : ''}" data-a="${a}" data-v="${k}"><span style="background:${swatchBg(k, k === 'classic' ? autoColor : c)}"></span>${T(k === 'classic' ? autoName : name)}</button>`).join('')}</div>` + photoRow +
+    (isPhoto || cur === 'classic' && autoName === 'Automático' ? '' : `<div class="segmented wk-tone"><button class="${tone !== 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="grad">${T('Degradé')}</button><button class="${tone === 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="soft">${T('Suave')}</button></div>`);
 }
+// Los próximos k cumpleaños (aviso de ejemplo en Recordatorios y en la bienvenida)
+const nextPeople = k => [...S.people].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).slice(0, k);
 // Lo que viene, cumpleaños y (con Unlock) fechas especiales, ordenado por días
 function upcoming(k, withSpecials = true) {
   const all = S.people.map(p => ({ p, n: daysLeft(p.m, p.d) }));
@@ -474,8 +500,8 @@ function upcoming(k, withSpecials = true) {
 }
 // En la lista de los widgets los cumples van en gris y las fechas en violeta
 const wCircle = it => it.p ? `<div class="avatar glyph w-gray">${ic('cake', '', 2)}</div>` : spIcon(it.sp);
-const wName = it => esc(it.p ? it.p.name : it.sp.name);
-const wWhen = n => { if (n === 0) return `<span class="w-hoy">Hoy</span>`; if (n === 1) return 'Mañana'; const [a, u] = countParts(n); return `<b>${a}</b> ${u}`; };
+const wName = it => esc(it.p ? it.p.name : T(it.sp.name));
+const wWhen = n => { if (n === 0) return `<span class="w-hoy">${T('Hoy')}</span>`; if (n === 1) return T('Mañana'); const [a, u] = countParts(n); return `<b>${a}</b> ${u}`; };
 const wBrand = () => `<div class="w-brand">Unforgettables</div>`;
 // Chico (gratis): el próximo cumple. El día del cumple se pone rojo con confeti.
 function widgetSmall() {
@@ -483,10 +509,10 @@ function widgetSmall() {
   const { p, n } = it, age = turningAge(p);
   const [a, u] = countParts(n);
   return `<div class="widget sm ${n === 0 ? 'w-party' : ''}">${n === 0 ? '<div class="confetti"></div>' : ''}${cakeIcon(p)}
-    <div class="w-count">${n === 0 ? '<span class="big">Hoy</span>' : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
-    <div><div class="w-name">${esc(p.name)}</div><div class="w-sub">${n === 0 ? (age ? `Cumple ${age} 🎉` : '¡Feliz cumple! 🎉') : `${monthDay(p.m, p.d)}${age ? ` · ${age}` : ''}`}</div></div></div>`;
+    <div class="w-count">${n === 0 ? `<span class="big">${T('Hoy')}</span>` : `<span class="big">${a}</span><span class="u">${u}</span>`}</div>
+    <div><div class="w-name">${esc(p.name)}</div><div class="w-sub">${n === 0 ? (age ? `${T('Cumple {n}', { n: age })} 🎉` : `${T('¡Feliz cumple!')} 🎉`) : `${monthDay(p.m, p.d)}${age ? ` · ${age}` : ''}`}</div></div></div>`;
 }
-const wRow = it => `<div class="w-row">${wCircle(it)}<div class="grow"><div class="w-rname">${wName(it)}</div><div class="w-sub">${it.p ? (turningAge(it.p) ? `Cumple ${turningAge(it.p)}` : monthDay(it.p.m, it.p.d)) : esc(it.sp.kind)}</div></div><div class="w-when">${wWhen(it.n)}</div></div>`;
+const wRow = it => `<div class="w-row">${wCircle(it)}<div class="grow"><div class="w-rname">${wName(it)}</div><div class="w-sub">${it.p ? (turningAge(it.p) ? T('Cumple {n}', { n: turningAge(it.p) }) : monthDay(it.p.m, it.p.d)) : esc(T(it.sp.kind))}</div></div><div class="w-when">${wWhen(it.n)}</div></div>`;
 // Mediano, grande y calendario: cada uno con su diseño y su color (Unlock), se cambian tocándolos en Widgets
 const W_KINDS = {
   next: ['Próximos', 'Mediano. Los tres que vienen, con cumples y fechas.', [['list', 'Lista'], ['cards', 'Tarjetas'], ['first', 'Destacado'], ['line', 'Línea de tiempo']]],
@@ -498,25 +524,24 @@ function wCfg(w, o = S.wcfg[w] || {}) {
   const ds = W_KINDS[w][2];
   return { design: ds.some(d => d[0] === o.design) ? o.design : ds[0][0], color: o.color === 'photo' && o.photo ? 'photo' : themeOk(o.color) ? o.color : themeOk(S.widgetTheme) ? S.widgetTheme : 'classic', tone: o.tone || S.widgetTone || 'grad', photo: o.photo || null };
 }
-const wDesignName = (w, c) => W_KINDS[w][2].find(d => d[0] === c.design)[1];
-const wFirst = it => it.p ? esc(it.p.name.split(' ')[0]) : esc(it.sp.name);
-const wUnit = n => n === 0 ? '<b>Hoy</b>' : n === 1 ? '<b>Mañana</b>' : (([a, u]) => `<b>${a}</b><span>${u}</span>`)(countParts(n));
+const wDesignName = (w, c) => T(W_KINDS[w][2].find(d => d[0] === c.design)[1]);
+const wFirst = it => it.p ? esc(it.p.name.split(' ')[0]) : esc(T(it.sp.name));
+const wUnit = n => n === 0 ? `<b>${T('Hoy')}</b>` : n === 1 ? `<b>${T('Mañana')}</b>` : (([a, u]) => `<b>${a}</b><span>${u}</span>`)(countParts(n));
 function widgetNext(c) {
   const t = tAttrs(c.color, c.tone, c.photo), its = upcoming(3);
   let body;
   if (c.design === 'cards') body = `${wBrand()}<div class="w-cards">${its.map(it => `<div>${wCircle(it)}<div class="w-cnum">${wUnit(it.n)}</div><div class="w-cname">${wFirst(it)}</div></div>`).join('')}</div>`;
-  else if (c.design === 'first') { const [a, ...rest] = its; body = `<div class="w-first"><div class="w-firstbig">${wCircle(a)}<div class="w-count">${a.n === 0 ? '<span class="big">Hoy</span>' : (([x, u]) => `<span class="big">${x}</span><span class="u">${u}</span>`)(countParts(a.n))}</div><div class="w-name">${wName(a)}</div></div><div class="w-firstrest">${wBrand()}${rest.map(it => `<div><div class="w-rname">${wName(it)}</div><div class="w-sub">${wWhen(it.n).replace(/<\/?b>/g, '')}</div></div>`).join('')}</div></div>`; }
+  else if (c.design === 'first') { const [a, ...rest] = its; body = `<div class="w-first"><div class="w-firstbig">${wCircle(a)}<div class="w-count">${a.n === 0 ? `<span class="big">${T('Hoy')}</span>` : (([x, u]) => `<span class="big">${x}</span><span class="u">${u}</span>`)(countParts(a.n))}</div><div class="w-name">${wName(a)}</div></div><div class="w-firstrest">${wBrand()}${rest.map(it => `<div><div class="w-rname">${wName(it)}</div><div class="w-sub">${wWhen(it.n).replace(/<\/?b>/g, '')}</div></div>`).join('')}</div></div>`; }
   else if (c.design === 'line') body = `${wBrand()}<div class="w-line">${its.map(it => `<div><div class="w-cnum">${wUnit(it.n)}</div><span class="dot ${it.p ? '' : 'sp'}"></span><div class="w-cname">${wFirst(it)}</div></div>`).join('')}</div>`;
   else body = `${wBrand()}${its.map(wRow).join('')}`;
   return `<div class="widget md wd-${c.design} ${t.cls}" style="${t.style}">${t.bg || ''}${body}</div>`;
 }
-const MON3 = m => cap(MONTHS[m - 1].slice(0, 3));
 function widgetList(c) {
   const t = tAttrs(c.color, c.tone, c.photo);
-  const head = (title = 'Próximos') => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
+  const head = (title = T('Próximos')) => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
   let body;
   if (c.design === 'months') {
-    let last = 0; body = head() + upcoming(6).map(it => { const x = it.p || it.sp, mh = x.m !== last ? `<div class="w-mhead">${cap(MONTHS[x.m - 1])}</div>` : ''; last = x.m; return mh + wRow(it); }).join('');
+    let last = 0; body = head() + upcoming(6).map(it => { const x = it.p || it.sp, mh = x.m !== last ? `<div class="w-mhead">${cap(monthName(x.m))}</div>` : ''; last = x.m; return mh + wRow(it); }).join('');
   } else if (c.design === 'compact') body = head() + upcoming(11).map(it => { const x = it.p || it.sp; return `<div class="w-crow"><span class="w-cdate">${x.d} ${MON3(x.m)}</span><span class="dot ${it.p ? '' : 'sp'}"></span><span class="grow">${wName(it)}</span><span class="w-when">${wWhen(it.n)}</span></div>`; }).join('');
   else if (c.design === 'grid') body = head() + `<div class="w-grid">${upcoming(6).map(it => `<div>${wCircle(it)}<div class="w-cnum">${wUnit(it.n)}</div><div class="w-cname">${wName(it)}</div></div>`).join('')}</div>`;
   else body = head() + upcoming(7).map(wRow).join('');
@@ -532,33 +557,33 @@ function monthCells(y, m, cell) {
 }
 function widgetCal(c) {
   const t = tAttrs(c.color, c.tone, c.photo), y = TODAY.getFullYear(), m = TODAY.getMonth() + 1;
-  const wk = `${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<i>${x}</i>`).join('')}`;
+  const wk = `${weekdays('narrow').map(x => `<i>${x}</i>`).join('')}`;
   const head = title => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
   const num = (d, k, hoy) => `<span class="${k}${hoy ? ' hoy' : ''}">${d}</span>`;
   let body;
-  if (c.design === 'year') body = head(String(y)) + `<div class="w-year">${MONTHS.map((_, i) => `<div class="${i + 1 === m ? 'cur' : ''}"><b>${MON3(i + 1)}</b><div class="w-ymini">${monthCells(y, i + 1, (d, k, hoy) => `<span class="${k}${hoy ? ' hoy' : ''}"></span>`)}</div></div>`).join('')}</div>`;
-  else if (c.design === 'icons') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, (d, k, hoy) => k ? `<span class="ic-${k}${hoy ? ' hoy' : ''}">${ic(k === 'cu' ? 'cake' : 'heart', '', 2.2)}</span>` : num(d, '', hoy))}</div>`;
-  else if (c.design === 'blocks') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-blocks">${wk}${monthCells(y, m, num)}</div>`;
-  else if (c.design === 'month') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, num)}</div>`;
-  else body = head(cap(MONTHS[m - 1])) + `<div class="w-cal">${wk}${monthCells(y, m, num)}</div><div class="w-sep"></div>${upcoming(3).map(wRow).join('')}`;
+  if (c.design === 'year') body = head(String(y)) + `<div class="w-year">${Array.from({ length: 12 }, (_, i) => `<div class="${i + 1 === m ? 'cur' : ''}"><b>${MON3(i + 1)}</b><div class="w-ymini">${monthCells(y, i + 1, (d, k, hoy) => `<span class="${k}${hoy ? ' hoy' : ''}"></span>`)}</div></div>`).join('')}</div>`;
+  else if (c.design === 'icons') body = head(cap(monthName(m))) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, (d, k, hoy) => k ? `<span class="ic-${k}${hoy ? ' hoy' : ''}">${ic(k === 'cu' ? 'cake' : 'heart', '', 2.2)}</span>` : num(d, '', hoy))}</div>`;
+  else if (c.design === 'blocks') body = head(cap(monthName(m))) + `<div class="w-cal w-blocks">${wk}${monthCells(y, m, num)}</div>`;
+  else if (c.design === 'month') body = head(cap(monthName(m))) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, num)}</div>`;
+  else body = head(cap(monthName(m))) + `<div class="w-cal">${wk}${monthCells(y, m, num)}</div><div class="w-sep"></div>${upcoming(3).map(wRow).join('')}`;
   return `<div class="widget lg w-calw wd-${c.design} ${t.cls}" style="${t.style}">${t.bg || ''}${body}</div>`;
 }
 const W_RENDER = { next: widgetNext, list: widgetList, cal: widgetCal };
 function sheetWidget(o) {
-  const c = wCfg(o.w, o), [title] = W_KINDS[o.w];
-  const h = `${designCarousel(W_KINDS[o.w][2], c.design, k => W_RENDER[o.w]({ ...c, design: k }), 'wDesign')}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(c.color, c.tone, 'wColor', 'Automático', null, o.photo)}</div>` +
-    `<div class="section-footer" style="margin:-20px 16px 24px">Para verlo en tu inicio, agregá el widget <b>${title}</b> de Unforgettables.</div>`;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title, right: `<button class="navbtn bold" data-a="wSave">Listo</button>` }) + `<div class="scroll">${h}</div>`);
+  const c = wCfg(o.w, o), title = T(W_KINDS[o.w][0]);
+  const h = `${designCarousel(W_KINDS[o.w][2], c.design, k => W_RENDER[o.w]({ ...c, design: k }), 'wDesign')}<div class="wk-color pin-color"><div class="wk-colhead"><span>${T('Color')}</span></div>${colorPicker(c.color, c.tone, 'wColor', 'Automático', null, o.photo)}</div>` +
+    `<div class="section-footer" style="margin:-20px 16px 24px">${T('Para verlo en tu inicio, agregá el widget <b>{w}</b> de Unforgettables.', { w: title })}</div>`;
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title, right: `<button class="navbtn bold" data-a="wSave">${T('Listo')}</button>` }) + `<div class="scroll">${h}</div>`);
 }
 // Fecha fijada: cualquier cumple o fecha especial, en un widget con el estilo de cuenta que elijas (Unlock)
 const PIN_STYLES = [['days', 'Días', 'Cuántos días faltan', 'hourglass'], ['secs', 'Con segundos', 'Días, horas, minutos y segundos', 'clock'], ['weeks', 'Semanas', 'Semanas y días', 'calendar'], ['bar', 'Barra', 'Cuánto falta del año', 'listBullet']];
-const pinStyleName = st => (PIN_STYLES.find(x => x[0] === st) || PIN_STYLES[0])[1];
+const pinStyleName = st => T((PIN_STYLES.find(x => x[0] === st) || PIN_STYLES[0])[1]);
 function pinEv(pin) {
   const x = pin.k === 'p' ? person(pin.id) : S.specials.find(s => s.id === pin.id); if (!x) return null;
   const n = daysLeft(x.m, x.d);
-  if (pin.k === 'p') { const age = turningAge(x); return { p: x, n, name: x.name, sub: age ? `Cumple ${age}` : monthDay(x.m, x.d), t: nextDate(x.m, x.d).getTime() }; }
+  if (pin.k === 'p') { const age = turningAge(x); return { p: x, n, name: x.name, sub: age ? T('Cumple {n}', { n: age }) : monthDay(x.m, x.d), t: nextDate(x.m, x.d).getTime() }; }
   const yrs = x.y ? nextDate(x.m, x.d).getFullYear() - x.y : null;
-  return { sp: x, n, name: x.name, sub: yrs ? `${yrs} ${yrs === 1 ? 'año' : 'años'}` : x.kind, t: nextDate(x.m, x.d).getTime() };
+  return { sp: x, n, name: T(x.name), sub: yrs ? TP(yrs, '{n} año', '{n} años') : T(x.kind), t: nextDate(x.m, x.d).getTime() };
 }
 // Diseños de cada estilo (el primero es el de siempre)
 const PIN_DESIGNS = {
@@ -568,7 +593,7 @@ const PIN_DESIGNS = {
   bar: [['solid', 'Lisa'], ['dotted', 'Punteada'], ['segments', 'Segmentos'], ['thick', 'Gruesa'], ['border', 'Borde']],
 };
 const pinDesign = pin => (PIN_DESIGNS[pin.style] || []).some(d => d[0] === pin.design) ? pin.design : (PIN_DESIGNS[pin.style] || [[null]])[0][0];
-const pinDesignName = pin => ((PIN_DESIGNS[pin.style] || []).find(d => d[0] === pinDesign(pin)) || [, ''])[1];
+const pinDesignName = pin => T(((PIN_DESIGNS[pin.style] || []).find(d => d[0] === pinDesign(pin)) || [, ''])[1]);
 // Lo que falta hasta las 0 h del día, en días / horas / minutos / segundos (se actualiza solo, ver tickAll)
 const TICK_MAX = { d: 365, h: 24, m: 60, s: 60 };
 function tickVal(t, f) {
@@ -601,40 +626,40 @@ function pinWidget(pin) {
   const icon = `<div class="w-emoji">${ic(ev.p ? 'cake' : spIc(ev.sp), '', 2.2)}</div>`;
   const label = `<div class="w-name ${size === 'sm' ? 'clamp' : ''}">${esc(ev.name)}</div><div class="w-sub">${esc(ev.sub)}</div>`;
   const head = `<div class="w-pinhead">${icon}<div class="grow">${label}</div></div>`;
-  const count = n === 0 ? `<div class="w-count"><span class="big">Hoy</span><span class="u">${ev.p ? '🎉' : '💜'}</span></div>` : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`;
+  const count = n === 0 ? `<div class="w-count"><span class="big">${T('Hoy')}</span><span class="u">${ev.p ? '🎉' : '💜'}</span></div>` : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`;
   let body, extra = '';
   if (st === 'secs') {
-    const F = [['d', 'días'], ['h', 'horas'], ['m', 'min'], ['s', 'seg']];
+    const F = [['d', T('días')], ['h', T('horas')], ['m', T('min')], ['s', T('seg')]];
     if (n === 0) body = head + count;
     else if (dz === 'flip') body = head + `<div class="w-flip">${F.map(([f, l], i) => `${i ? '<em>:</em>' : ''}<div><b>${tick(ev.t, f)}</b><i>${l}</i></div>`).join('')}</div>`;
     else if (dz === 'digital') body = head + `<div class="w-digital"><div>${F.map(([f]) => tick(ev.t, f)).join('<em>:</em>')}</div><div class="lab">${F.map(([, l]) => `<i>${l}</i>`).join('')}</div></div>`;
     else if (dz === 'rings') body = head + `<div class="w-rings">${F.map(([f, l]) => `<div><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg tring" data-t="${ev.t}" data-f="${f}" stroke-dasharray="${ringDash(ev.t, f)}" transform="rotate(-90 22 22)"/></svg><b>${tick(ev.t, f)}</b><i>${l}</i></div>`).join('')}</div>`;
-    else if (dz === 'line') body = head + `<div class="w-sentence">Faltan ${tick(ev.t, 'd')} días, ${tick(ev.t, 'h')} h, ${tick(ev.t, 'm')} min y ${tick(ev.t, 's')} s</div>`;
+    else if (dz === 'line') body = head + `<div class="w-sentence">${T('Faltan {d} días, {h} h, {m} min y {s} s', { d: tick(ev.t, 'd'), h: tick(ev.t, 'h'), m: tick(ev.t, 'm'), s: tick(ev.t, 's') })}</div>`;
     else body = head + `<div class="w-clock">${F.map(([f, l]) => `<div>${tick(ev.t, f)}<i>${l}</i></div>`).join('')}</div>`;
   } else if (st === 'bar') {
     const top = `<div class="w-pinhead">${icon}<div class="grow">${label}</div>${n === 0 ? '' : `<div class="w-count"><span class="big">${a}</span><span class="u">${u}</span></div>`}</div>`;
-    const lab = `<div class="w-barlab"><span>Desde el último</span><span>${n === 0 ? '¡Es hoy!' : `${pct}% del año`}</span></div>`;
+    const lab = `<div class="w-barlab"><span>${T('Desde el último')}</span><span>${n === 0 ? T('¡Es hoy!') : T('{p}% del año', { p: pct })}</span></div>`;
     let bar;
     if (dz === 'dotted') { const k = 24, on = Math.round(pct / 100 * k); bar = `<div class="w-dots">${Array.from({ length: k }, (_, i) => `<span class="${i < on ? 'on' : ''}"></span>`).join('')}</div>`; }
     else if (dz === 'segments') { const on = pct / 100 * 12; bar = `<div class="w-segs">${Array.from({ length: 12 }, (_, i) => `<span><i style="width:${Math.max(0, Math.min(1, on - i)) * 100}%"></i></span>`).join('')}</div>`; }
-    else if (dz === 'thick') bar = `<div class="w-bar thick"><span style="width:${pct}%"></span><em>${n === 0 ? '¡Es hoy!' : `${pct}%`}</em></div>`;
+    else if (dz === 'thick') bar = `<div class="w-bar thick"><span style="width:${pct}%"></span><em>${n === 0 ? T('¡Es hoy!') : `${pct}%`}</em></div>`;
     else bar = `<div class="w-bar"><span style="width:${pct}%"></span></div>`;
     if (dz === 'border') { extra = borderSvg(pct, 330, 158, 22); body = top + lab; }
     else body = top + `<div>${bar}${dz === 'thick' ? '' : lab}</div>`;
   } else if (st === 'weeks') {
     const w = Math.floor(n / 7), d = n % 7;
-    const txt = `${w ? `${w} ${w === 1 ? 'semana' : 'semanas'}` : ''}${w && d ? ' y ' : ''}${d || !w ? `${d} ${d === 1 ? 'día' : 'días'}` : ''}`;
+    const txt = w && d ? T('{w} y {d}', { w: TP(w, '{n} semana', '{n} semanas'), d: TP(d, '{n} día', '{n} días') }) : w ? TP(w, '{n} semana', '{n} semanas') : TP(d, '{n} día', '{n} días');
     if (n === 0) body = icon + count + `<div>${label}</div>`;
-    else if (dz === 'dots') { const shown = Math.min(n, 35); body = `<div class="w-pinhead">${icon}<span class="w-sub">${txt}</span></div><div class="w-wdots">${Array.from({ length: Math.ceil(shown / 7) * 7 }, (_, i) => `<span class="${i < shown ? 'on' : ''}"></span>`).join('')}</div>${n > 35 ? `<div class="w-sub">y ${n - 35} días más</div>` : ''}<div class="w-name clamp">${esc(ev.name)}</div>`; }
-    else if (dz === 'stack') body = icon + `<div class="w-stack"><b>${w || d}</b><span>${w ? (w === 1 ? 'semana' : 'semanas') : (d === 1 ? 'día' : 'días')}</span>${w && d ? `<i>y ${d} ${d === 1 ? 'día' : 'días'}</i>` : ''}</div><div class="w-name clamp">${esc(ev.name)}</div>`;
-    else body = icon + `<div class="w-count">${w ? `<span class="big">${w}</span><span class="u">sem</span>` : ''}${d || !w ? `<span class="big">${d}</span><span class="u">${d === 1 ? 'día' : 'días'}</span>` : ''}</div>` + `<div>${label}</div>`;
+    else if (dz === 'dots') { const shown = Math.min(n, 35); body = `<div class="w-pinhead">${icon}<span class="w-sub">${txt}</span></div><div class="w-wdots">${Array.from({ length: Math.ceil(shown / 7) * 7 }, (_, i) => `<span class="${i < shown ? 'on' : ''}"></span>`).join('')}</div>${n > 35 ? `<div class="w-sub">${TP(n - 35, 'y {n} día más', 'y {n} días más')}</div>` : ''}<div class="w-name clamp">${esc(ev.name)}</div>`; }
+    else if (dz === 'stack') body = icon + `<div class="w-stack"><b>${w || d}</b><span>${w ? TP(w, 'semana', 'semanas') : TP(d, 'día', 'días')}</span>${w && d ? `<i>${TP(d, 'y {n} día', 'y {n} días')}</i>` : ''}</div><div class="w-name clamp">${esc(ev.name)}</div>`;
+    else body = icon + `<div class="w-count">${w ? `<span class="big">${w}</span><span class="u">${T('sem')}</span>` : ''}${d || !w ? `<span class="big">${d}</span><span class="u">${TP(d, 'día', 'días')}</span>` : ''}</div>` + `<div>${label}</div>`;
   } else {
-    if (dz === 'ring') body = `<div class="w-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg" stroke-dasharray="${(pct / 100 * RING_C).toFixed(1)} ${RING_C.toFixed(1)}" transform="rotate(-90 22 22)"/></svg><div><b>${n === 0 ? 'Hoy' : a}</b><i>${n === 0 ? '' : u}</i></div></div><div class="w-name clamp center">${esc(ev.name)}</div>`;
-    else if (dz === 'center') body = `<div class="w-center"><b>${n === 0 ? 'Hoy' : a}</b><span>${n === 0 ? (ev.p ? '¡es su cumple!' : '¡es hoy!') : u}</span></div><div class="w-name clamp center">${esc(ev.name)}</div>`;
+    if (dz === 'ring') body = `<div class="w-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg" stroke-dasharray="${(pct / 100 * RING_C).toFixed(1)} ${RING_C.toFixed(1)}" transform="rotate(-90 22 22)"/></svg><div><b>${n === 0 ? T('Hoy') : a}</b><i>${n === 0 ? '' : u}</i></div></div><div class="w-name clamp center">${esc(ev.name)}</div>`;
+    else if (dz === 'center') body = `<div class="w-center"><b>${n === 0 ? T('Hoy') : a}</b><span>${n === 0 ? T(ev.p ? '¡es su cumple!' : '¡es hoy!') : u}</span></div><div class="w-name clamp center">${esc(ev.name)}</div>`;
     else if (dz === 'date') {
       // Hoja de almanaque: el mes arriba con los aros, el día grande y abajo cuánto falta
       const dt = nextDate((ev.p || ev.sp).m, (ev.p || ev.sp).d);
-      body = `<div class="w-sheet"><div class="w-sheettop"><span></span><b>${cap(MONTHS[dt.getMonth()])}</b><span></span></div><div class="w-sheetday"><b>${dt.getDate()}</b><i>${n === 0 ? (ev.p ? '¡Hoy! 🎉' : '¡Hoy! 💜') : `${cap(dt.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', ''))} · ${n === 1 ? 'mañana' : `en ${a} ${u}`}`}</i></div></div>` +
+      body = `<div class="w-sheet"><div class="w-sheettop"><span></span><b>${cap(monthName(dt.getMonth() + 1))}</b><span></span></div><div class="w-sheetday"><b>${dt.getDate()}</b><i>${n === 0 ? `${T('¡Hoy!')} ${ev.p ? '🎉' : '💜'}` : `${cap(fmtDate({ weekday: 'short' }, dt).replace('.', ''))} · ${n === 1 ? T('mañana') : T('en {n} {u}', { n: a, u })}`}</i></div></div>` +
         `<div class="w-sheetfoot"><span class="w-name">${esc(ev.name)}</span></div>`;
     }
     else { body = icon + count + `<div>${label}</div>`; if (dz === 'border') extra = borderSvg(pct, 100, 100, 14); }
@@ -648,22 +673,22 @@ function sheetPin(o) {
   const pinned = S.pins.some(x => x.k === o.k && x.id === o.id);
   const pin = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo };
   const ev = pinEv(pin);
-  const h = pinPicker(o, pin) + `<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2], o.photo)}</div>` +
-    (pinned ? section(`<button class="row destructive" data-a="pinRemove">Quitar de Widgets</button>`) : '') +
-    `<div class="section-footer" style="margin:-20px 16px 24px">Queda en la pestaña Widgets. Para verlo en tu inicio, agregá el widget <b>Fecha fijada</b> de Unforgettables y elegí ${esc(ev.p ? ev.name.split(' ')[0] : ev.name)}.</div>`;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Mostrar en un widget', right: `<button class="navbtn bold" data-a="pinSave">${pinned ? 'Listo' : 'Agregar'}</button>` }) + `<div class="scroll">${h}</div>`);
+  const h = pinPicker(o, pin) + `<div class="wk-color pin-color"><div class="wk-colhead"><span>${T('Color')}</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2], o.photo)}</div>` +
+    (pinned ? section(`<button class="row destructive" data-a="pinRemove">${T('Quitar de Widgets')}</button>`) : '') +
+    `<div class="section-footer" style="margin:-20px 16px 24px">${T('Queda en la pestaña Widgets. Para verlo en tu inicio, agregá el widget <b>Fecha fijada</b> de Unforgettables y elegí {name}.', { name: esc(ev.p ? ev.name.split(' ')[0] : ev.name) })}</div>`;
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: T('Mostrar en un widget'), right: `<button class="navbtn bold" data-a="pinSave">${T(pinned ? 'Listo' : 'Agregar')}</button>` }) + `<div class="scroll">${h}</div>`);
 }
 // Estilo arriba (pestañas) y diseño deslizando el widget, como al personalizar la pantalla bloqueada (SwiftUI: TabView .page)
 const STYLE_SHORT = { days: 'Días', secs: 'Segundos', weeks: 'Semanas', bar: 'Barra' };
 function pinPicker(o, pin) {
-  return `<div class="pin-tabs">${PIN_STYLES.map(([k, , , icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}">${ic(icon, '', 2)}<span>${STYLE_SHORT[k]}</span></button>`).join('')}</div>` +
+  return `<div class="pin-tabs">${PIN_STYLES.map(([k, , , icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}">${ic(icon, '', 2)}<span>${T(STYLE_SHORT[k])}</span></button>`).join('')}</div>` +
     designCarousel(PIN_DESIGNS[o.style], pinDesign(pin), k => pinWidget({ ...pin, design: k }), 'pinDesign');
 }
 // Carrusel de diseños: se desliza el widget y los puntos marcan cuál es (fechas fijadas y widgets de la pestaña Widgets)
 function designCarousel(ds, design, draw, a) {
   const cur = Math.max(0, ds.findIndex(d => d[0] === design));
   return `<div class="pin-car" data-i="${cur}" data-keys="${ds.map(d => d[0]).join(',')}">${ds.map(([k]) => `<div class="pin-slide"><div class="wk-stage">${draw(k)}</div></div>`).join('')}</div>` +
-    `<div class="pin-carlab"><b>${ds[cur][1]}</b><span class="pin-dots">${ds.map(([k, t], i) => `<button class="${i === cur ? 'on' : ''}" data-a="${a}" data-v="${k}" aria-label="${t}"></button>`).join('')}</span><span class="s">Deslizá para ver otro diseño</span></div>`;
+    `<div class="pin-carlab"><b>${T(ds[cur][1])}</b><span class="pin-dots">${ds.map(([k, t], i) => `<button class="${i === cur ? 'on' : ''}" data-a="${a}" data-v="${k}" aria-label="${T(t)}"></button>`).join('')}</span><span class="s">${T('Deslizá para ver otro diseño')}</span></div>`;
 }
 // Ajustar la foto de fondo: se arrastra para elegir qué parte se ve, zoom y oscurecer (SwiftUI: PhotosPicker + DragGesture)
 function sheetPhotoAdj(o) {
@@ -671,11 +696,11 @@ function sheetPhotoAdj(o) {
   const prev = parent.s === 'pin' ? pinWidget({ k: parent.k, id: parent.id, style: parent.style, design: parent.design, tone: parent.tone, color: 'photo', photo: ph })
     : W_RENDER[parent.w]({ design: parent.design, tone: parent.tone, color: 'photo', photo: ph });
   const slider = (id, label, min, max, v, icL, icR) => `<div class="adj-row"><span class="adj-lab">${label}</span><span class="adj-ic">${ic(icL, '', 2)}</span><input type="range" id="${id}" min="${min}" max="${max}" step="0.01" value="${v}"><span class="adj-ic">${ic(icR, '', 2)}</span></div>`;
-  const h = `<div class="pin-prev"><div class="wk-stage" id="photoStage">${prev}<div class="adj-hint">${ic('move', '', 2)}Arrastrá para mover</div></div></div>` +
-    `<div class="wk-color pin-color adj">${slider('adjZ', 'Zoom', 1, 3, ph.z, 'minus', 'plus')}${slider('adjDim', 'Oscurecer', 0, 0.6, ph.dim, 'sun', 'moon')}</div>` +
-    section(`<button class="row has-icon" data-a="bgPhotoNew"><span class="icon-sq" style="background:linear-gradient(#ffd25e,#ff9f0a)">${ic('photo', '', 2)}</span><span class="grow">Elegir otra foto</span>${chev()}</button><button class="row" data-a="photoAdjReset"><span class="grow" style="color:var(--accent)">Volver a centrar</span></button>`,
-      { footer: 'La foto queda guardada solo en tu iPhone. No se sube a ningún lado.' });
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Ajustar foto', right: `<button class="navbtn bold" data-a="photoAdjSave">Listo</button>` }) + `<div class="scroll">${h}</div>`);
+  const h = `<div class="pin-prev"><div class="wk-stage" id="photoStage">${prev}<div class="adj-hint">${ic('move', '', 2)}${T('Arrastrá para mover')}</div></div></div>` +
+    `<div class="wk-color pin-color adj">${slider('adjZ', T('Zoom'), 1, 3, ph.z, 'minus', 'plus')}${slider('adjDim', T('Oscurecer'), 0, 0.6, ph.dim, 'sun', 'moon')}</div>` +
+    section(`<button class="row has-icon" data-a="bgPhotoNew"><span class="icon-sq" style="background:linear-gradient(#ffd25e,#ff9f0a)">${ic('photo', '', 2)}</span><span class="grow">${T('Elegir otra foto')}</span>${chev()}</button><button class="row" data-a="photoAdjReset"><span class="grow" style="color:var(--accent)">${T('Volver a centrar')}</span></button>`,
+      { footer: T('La foto queda guardada solo en tu iPhone. No se sube a ningún lado.') });
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: T('Ajustar foto'), right: `<button class="navbtn bold" data-a="photoAdjSave">${T('Listo')}</button>` }) + `<div class="scroll">${h}</div>`);
 }
 // Mueve la foto en la vista previa sin volver a dibujar todo (para que el arrastre y los sliders vayan fluidos)
 function applyPhotoAdj(ph) {
@@ -704,36 +729,36 @@ function lockScreen() {
   const [a, b] = upcoming(2, false);
   const short = it => esc(it.p.name.split(' ')[0]);
   const ring = it => { const pct = Math.max(.06, 1 - Math.min(it.n, 30) / 30); return `<div class="lk-circ"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bg"/><circle cx="22" cy="22" r="19" class="fg" stroke-dasharray="${(pct * 119.4).toFixed(1)} 200" transform="rotate(-90 22 22)"/></svg><div>${it.n === 0 ? ic('cake', '', 2) : `<b>${it.n}</b>`}<span>${short(it)}</span></div></div>`; };
-  const rect = it => `<div class="lk-rect"><div class="t">${ic('cake', '', 2.2)}${esc(it.p.name)}</div><div>${it.n === 0 ? `Cumple ${turningAge(it.p) || ''} hoy` : it.n === 1 ? 'Cumple mañana' : `En ${countParts(it.n).join(' ')}`}</div><div class="s">${monthDay(it.p.m, it.p.d)}</div></div>`;
-  return `<div class="lk-wall"><div class="lk-inline">${cap(TODAY.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' }).replace('.', ''))} · ${ic('cake', '', 2.2)} ${b ? `${short(b)} ${b.n === 1 ? 'mañana' : `en ${b.n} días`}` : ''}</div><div class="lk-time">9:41</div>
+  const rect = it => `<div class="lk-rect"><div class="t">${ic('cake', '', 2.2)}${esc(it.p.name)}</div><div>${it.n === 0 ? (turningAge(it.p) ? T('Cumple {n} hoy', { n: turningAge(it.p) }) : T('Cumple hoy')) : it.n === 1 ? T('Cumple mañana') : T('En {x}', { x: countParts(it.n).join(' ') })}</div><div class="s">${monthDay(it.p.m, it.p.d)}</div></div>`;
+  return `<div class="lk-wall"><div class="lk-inline">${cap(fmtDate({ weekday: 'short', day: 'numeric' }, TODAY).replace('.', ''))} · ${ic('cake', '', 2.2)} ${b ? `${short(b)} ${b.n === 1 ? T('mañana') : TP(b.n, 'en {n} día', 'en {n} días')}` : ''}</div><div class="lk-time">9:41</div>
     <div class="lk-row">${a ? ring(a) : ''}${b ? ring(b) : ''}${a ? rect(a) : ''}</div></div>`;
 }
 // Ícono de app falso para la vista previa del inicio
 const fakeApp = (bg, icon, label) => `<div class="w-app"><span style="background:${bg}">${ic(icon, '', 2)}</span>${label}</div>`;
 function screenWidgets() {
-  const free = '<span class="w-free">Gratis</span>';
+  const free = `<span class="w-free">${T('Gratis')}</span>`;
   const tag = () => S.unlocked ? '' : lockBadge();
   const tap = f => S.unlocked ? `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"` : `data-a="paywall" data-f="${f}"`;
   const card = (stage, t, s, right, attrs = '') => `<button class="wk" ${attrs}><div class="wk-stage">${stage}</div><div class="wk-info"><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div>${right}</div></button>`;
-  const steps = arr => `<div class="wk-how"><div class="t">Cómo agregarlos</div>${arr.map((x, i) => `<div class="step"><span>${i + 1}</span><div>${x}</div></div>`).join('')}</div>`;
-  let h = `<div class="segmented"><button class="${S.widgetsMode === 'home' ? 'sel' : ''}" data-a="widgetsMode" data-v="home">Inicio</button><button class="${S.widgetsMode === 'lock' ? 'sel' : ''}" data-a="widgetsMode" data-v="lock">Pantalla bloqueada</button></div>`;
+  const steps = arr => `<div class="wk-how"><div class="t">${T('Cómo agregarlos')}</div>${arr.map((x, i) => `<div class="step"><span>${i + 1}</span><div>${T(x)}</div></div>`).join('')}</div>`;
+  let h = `<div class="segmented"><button class="${S.widgetsMode === 'home' ? 'sel' : ''}" data-a="widgetsMode" data-v="home">${T('Inicio')}</button><button class="${S.widgetsMode === 'lock' ? 'sel' : ''}" data-a="widgetsMode" data-v="lock">${T('Pantalla bloqueada')}</button></div>`;
   if (S.widgetsMode === 'home') {
     h += `<div class="wk-list">`;
-    h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', 'Mensajes')}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', 'Fotos')}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', 'Teléfono')}</div></div>`,
-      'Próximo cumple', 'Chico. Quién cumple y cuánto falta.', free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
-    h += `<div class="wk-sec">Fechas fijadas ${S.unlocked ? `<span class="wk-count">${S.pins.filter(pinEv).length} de ${S.pinMax}</span>` : tag()}</div>`;
+    h += card(`<div class="wk-home">${widgetSmall()}<div class="w-apps"><div class="w-app"><span>${appIcon()}</span>Unforgettables</div>${fakeApp('linear-gradient(#5ff777,#28c840)', 'message', T('Mensajes'))}${fakeApp('linear-gradient(#ffd25e,#ff9f0a)', 'photo', T('Fotos'))}${fakeApp('linear-gradient(#5ac8fa,#007aff)', 'phone', T('Teléfono'))}</div></div>`,
+      T('Próximo cumple'), T('Chico. Quién cumple y cuánto falta.'), free, `data-a="fake" data-msg="En el iPhone: mantené apretado el fondo de pantalla → Editar → Agregar widget"`);
+    h += `<div class="wk-sec">${T('Fechas fijadas')} ${S.unlocked ? `<span class="wk-count">${T('{a} de {b}', { a: S.pins.filter(pinEv).length, b: S.pinMax })}</span>` : tag()}</div>`;
     // Si la persona o la fecha ya no está (se borró, o datos guardados de antes), no se muestra
     // La X de la esquina la saca de Widgets sin abrir la hoja
-    const unpinX = pin => S.unlocked ? `<span class="wk-x" data-a="pinUnpin" data-k="${pin.k}" data-id="${pin.id}" aria-label="Quitar de Widgets"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></span>` : '';
-    h += S.pins.filter(pinEv).map(pin => card(unpinX(pin) + pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. Tocá para cambiarlo.`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
-    h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.</div></div>`;
-    h += `<div class="wk-sec">Listas y calendario ${tag()}</div>`;
-    h += Object.keys(W_KINDS).map(w => { const c = wCfg(w), [t, sub] = W_KINDS[w]; return card(W_RENDER[w](c), t, S.unlocked ? `${sub.split('.')[0]} · ${wDesignName(w, c)}. Tocá para cambiarlo.` : sub, '', S.unlocked ? `data-a="wOpen" data-w="${w}"` : `data-a="paywall" data-f="${w === 'cal' ? 'cal' : 'theme'}"`); }).join('');
+    const unpinX = pin => S.unlocked ? `<span class="wk-x" data-a="pinUnpin" data-k="${pin.k}" data-id="${pin.id}" aria-label="${T('Quitar de Widgets')}"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></span>` : '';
+    h += S.pins.filter(pinEv).map(pin => card(unpinX(pin) + pinWidget(pin), esc(pinEv(pin)?.name || ''), `${pinStyleName(pin.style)} · ${pinDesignName(pin)}. ${T('Tocá para cambiarlo.')}`, '', S.unlocked ? `data-a="pin" data-k="${pin.k}" data-id="${pin.id}"` : `data-a="paywall" data-f="pin"`)).join('');
+    h += `<div class="wk-how wk-tip">${ic('widgets', '', 2)}<div>${T('Para fijar otra, abrí un cumple o una fecha y tocá <b>Mostrar en un widget</b>.')}</div></div>`;
+    h += `<div class="wk-sec">${T('Listas y calendario')} ${tag()}</div>`;
+    h += Object.keys(W_KINDS).map(w => { const c = wCfg(w), t = T(W_KINDS[w][0]), sub = T(W_KINDS[w][1]); return card(W_RENDER[w](c), t, S.unlocked ? `${sub.split(/[.。]/)[0]} · ${wDesignName(w, c)}. ${T('Tocá para cambiarlo.')}` : sub, '', S.unlocked ? `data-a="wOpen" data-w="${w}"` : `data-a="paywall" data-f="${w === 'cal' ? 'cal' : 'theme'}"`); }).join('');
     h += steps(['Mantené apretado el fondo de la pantalla de inicio hasta que los íconos se muevan.', 'Tocá <b>Editar</b> arriba a la izquierda y después <b>Agregar widget</b>.', 'Buscá <b>Unforgettables</b>, elegí el tamaño y tocá <b>Agregar widget</b>.']);
     h += `</div>`;
   } else {
     h += `<div class="wk-list">`;
-    h += card(lockScreen(), 'Pantalla bloqueada', 'Cuánto falta, sin desbloquear el iPhone: en línea arriba de la hora, circular y rectangular.', tag(), tap('lock'));
+    h += card(lockScreen(), T('Pantalla bloqueada'), T('Cuánto falta, sin desbloquear el iPhone: en línea arriba de la hora, circular y rectangular.'), tag(), tap('lock'));
     h += steps(['Con el iPhone bloqueado, mantené apretada la pantalla y tocá <b>Personalizar</b>.', 'Elegí <b>Pantalla bloqueada</b> y tocá el espacio de widgets debajo de la hora.', 'Buscá <b>Unforgettables</b> y elegí el formato.']);
     h += `</div>`;
   }
@@ -743,57 +768,64 @@ function screenWidgets() {
 /* ---------------- Pantallas: Ajustes ---------------- */
 function screenSettings() {
   let h = '';
-  if (S.unlocked) h += section(`<div class="row has-icon"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a)">${ic('star', '', 2)}</span><span class="grow"><div class="title-semibold">Todo desbloqueado</div><div class="sub">Gracias por apoyar la app 💛</div></span><span class="unlocked-pill">✓</span></div>`);
-  else h += section(`<button class="row has-icon" data-a="paywall" data-f="settings" style="padding-top:14px;padding-bottom:14px"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a);width:40px;height:40px;border-radius:10px;font-size:22px">🎁</span><span class="grow"><div class="title-semibold">Desbloquear todo</div><div class="sub">Pago único, sin suscripción</div></span>${chev()}</button>`);
-  h += section(navRow({ icon: 'bell', color: '#ff3b30', title: 'Recordatorios', value: S.rem.on ? `${S.rem.time} · ${S.rem.before ? S.rem.before + 'd antes' : 'mismo día'}` : 'Apagados', a: 'go', extra: 'data-s="reminders"' }) +
-    navRow({ icon: 'download', color: '#34c759', title: 'Importar desde Contactos', a: 'import' }), { header: 'Avisos y datos' });
-  const ex = (icon, color, title, s) => S.unlocked ? navRow({ icon, color, title, a: 'go', extra: `data-s="${s}"` }) : `<button class="row has-icon" data-a="paywall" data-f="${s}"><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><span class="grow">${title}</span>${lockBadge()}</button>`;
-  h += section(ex('heart', '#af52de', 'Fechas especiales', 'specials') + ex('people', '#007aff', 'Compartir lista con pareja o familia', 'share') + ex('briefcase', '#5856d6', 'Modo trabajo', 'work') + ex('widgets', '#ff9500', 'Personalizar widgets', 'widgetsTab') + (S.unlocked ? navRow({ icon: 'clock', color: '#ff3b30', title: 'Máximo de fechas fijadas', value: String(S.pinMax), a: 'go', extra: 'data-s="pinMax"' }) : ''), { header: 'Extras' });
-  h += section(navRow({ icon: 'moon', color: '#1c1c1e', title: 'Apariencia', value: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' }[S.theme], a: 'go', extra: 'data-s="appearance"' }) +
-    navRow({ icon: 'info', color: '#8e8e93', title: 'Ver bienvenida otra vez', a: 'onboarding' }), { header: 'General' });
-  h += section(`<button class="row accent" data-a="restore">Restaurar compra</button>`, { footer: 'Si ya pagaste en otro iPhone con el mismo Apple ID, tocá Restaurar.' });
-  h += section(`<button class="row accent" data-a="refresh">Actualizar prototipo</button><button class="row accent" data-a="${S.unlocked ? 'relock' : 'unlockNow'}">${S.unlocked ? 'Volver a bloquear (solo prototipo)' : 'Desbloquear sin pagar (solo prototipo)'}</button><button class="row destructive" data-a="resetDemo">Restablecer datos de ejemplo</button>`, { header: 'Prototipo', footer: 'Estas opciones existen solo en el prototipo para revisar el diseño.' });
-  h += `<div class="section-footer" style="text-align:center;padding-bottom:30px">Unforgettables · prototipo de diseño</div>`;
-  return `<div class="screen" data-key="settings">${navbar({})}<div class="scroll" data-key="settings-scroll"><div class="large-title">Ajustes</div>${h}</div></div>`;
+  if (S.unlocked) h += section(`<div class="row has-icon"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a)">${ic('star', '', 2)}</span><span class="grow"><div class="title-semibold">${T('Todo desbloqueado')}</div><div class="sub">${T('Gracias por apoyar la app')} 💛</div></span><span class="unlocked-pill">✓</span></div>`);
+  else h += section(`<button class="row has-icon" data-a="paywall" data-f="settings" style="padding-top:14px;padding-bottom:14px"><span class="icon-sq" style="background:linear-gradient(135deg,#ff7a85,#e23d4a);width:40px;height:40px;border-radius:10px;font-size:22px">🎁</span><span class="grow"><div class="title-semibold">${T('Desbloquear todo')}</div><div class="sub">${T('Pago único, sin suscripción')}</div></span>${chev()}</button>`);
+  h += section(navRow({ icon: 'bell', color: '#ff3b30', title: T('Recordatorios'), value: S.rem.on ? `${S.rem.time} · ${S.rem.before ? T('{n}d antes', { n: S.rem.before }) : T('mismo día')}` : T('Apagados'), a: 'go', extra: 'data-s="reminders"' }) +
+    navRow({ icon: 'download', color: '#34c759', title: T('Importar desde Contactos'), a: 'import' }), { header: T('Avisos y datos') });
+  const ex = (icon, color, title, s) => (title = T(title), S.unlocked) ? navRow({ icon, color, title, a: 'go', extra: `data-s="${s}"` }) : `<button class="row has-icon" data-a="paywall" data-f="${s}"><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><span class="grow">${title}</span>${lockBadge()}</button>`;
+  h += section(ex('heart', '#af52de', 'Fechas especiales', 'specials') + ex('people', '#007aff', 'Compartir lista con pareja o familia', 'share') + ex('briefcase', '#5856d6', 'Modo trabajo', 'work') + ex('widgets', '#ff9500', 'Personalizar widgets', 'widgetsTab') + (S.unlocked ? navRow({ icon: 'clock', color: '#ff3b30', title: T('Máximo de fechas fijadas'), value: String(S.pinMax), a: 'go', extra: 'data-s="pinMax"' }) : ''), { header: T('Extras') });
+  h += section(navRow({ icon: 'moon', color: '#1c1c1e', title: T('Apariencia'), value: T({ system: 'Sistema', light: 'Claro', dark: 'Oscuro' }[S.theme]), a: 'go', extra: 'data-s="appearance"' }) +
+    navRow({ icon: 'globe', color: '#007aff', title: T('Idioma'), value: LANGS.find(l => l[0] === S.lang)[1], a: 'go', extra: 'data-s="language"' }) +
+    navRow({ icon: 'info', color: '#8e8e93', title: T('Ver bienvenida otra vez'), a: 'onboarding' }), { header: T('General') });
+  h += section(`<button class="row accent" data-a="restore">${T('Restaurar compra')}</button>`, { footer: T('Si ya pagaste en otro iPhone con el mismo Apple ID, tocá Restaurar.') });
+  h += section(`<button class="row accent" data-a="refresh">${T('Actualizar prototipo')}</button><button class="row accent" data-a="${S.unlocked ? 'relock' : 'unlockNow'}">${T(S.unlocked ? 'Volver a bloquear (solo prototipo)' : 'Desbloquear sin pagar (solo prototipo)')}</button><button class="row destructive" data-a="resetDemo">${T('Restablecer datos de ejemplo')}</button>`, { header: T('Prototipo'), footer: T('Estas opciones existen solo en el prototipo para revisar el diseño.') });
+  h += `<div class="section-footer" style="text-align:center;padding-bottom:30px">Unforgettables · ${T('prototipo de diseño')}</div>`;
+  return `<div class="screen" data-key="settings">${navbar({})}<div class="scroll" data-key="settings-scroll"><div class="large-title">${T('Ajustes')}</div>${h}</div></div>`;
 }
 function checkList(opts, cur, a) {
-  return opts.map(([v, label]) => `<button class="row ${String(cur) === String(v) ? 'checked' : ''}" data-a="${a}" data-v="${v}"><span class="grow">${label}</span>${String(cur) === String(v) ? ic('check', 'check', 2.6) : ''}</button>`).join('');
+  return opts.map(([v, label, sub]) => `<button class="row ${String(cur) === String(v) ? 'checked' : ''}" data-a="${a}" data-v="${v}"><span class="grow">${label}${sub ? `<div class="sub">${sub}</div>` : ''}</span>${String(cur) === String(v) ? ic('check', 'check', 2.6) : ''}</button>`).join('');
 }
 function screenReminders() {
   const r = S.rem; const first = nextPeople(1)[0];
-  let h = `<div class="section"><div class="section-header">Así te llega</div><div style="display:flex;justify-content:center;padding:6px 0 4px"><div class="notif-mock"><div class="app-ic">${appIcon()}</div><div style="flex:1"><div class="h">Unforgettables<span>${r.time}</span></div><div>${r.before ? `En ${r.before} ${r.before === 1 ? 'día' : 'días'} cumple ${esc(first?.name || 'Mora')} 🎈` : `Hoy cumple ${esc(first?.name || 'Mora')} 🎂`}</div><div class="muted small">Tocá para ver ideas de regalo</div></div></div></div></div>`;
-  h += section(`<div class="row"><span class="grow">Recordatorios</span>${toggle(r.on, 'remToggle', 'data-k="on"')}</div><label class="row"><span class="grow">Hora del aviso</span><input type="time" id="remTime" value="${r.time}" style="border:0;background:var(--fill);border-radius:8px;padding:6px 10px;font-size:17px"></label>`, { footer: 'Usa la hora de tu iPhone.' });
+  let h = `<div class="section"><div class="section-header">${T('Así te llega')}</div><div style="display:flex;justify-content:center;padding:6px 0 4px"><div class="notif-mock"><div class="app-ic">${appIcon()}</div><div style="flex:1"><div class="h">Unforgettables<span>${r.time}</span></div><div>${r.before ? `${TP(r.before, 'En {n} día cumple {name}', 'En {n} días cumple {name}', { name: esc(first?.name || 'Mora') })} 🎈` : `${T('Hoy cumple {name}', { name: esc(first?.name || 'Mora') })} 🎂`}</div><div class="muted small">${T('Tocá para ver ideas de regalo')}</div></div></div></div></div>`;
+  h += section(`<div class="row"><span class="grow">${T('Recordatorios')}</span>${toggle(r.on, 'remToggle', 'data-k="on"')}</div><label class="row"><span class="grow">${T('Hora del aviso')}</span><input type="time" id="remTime" value="${r.time}" style="border:0;background:var(--fill);border-radius:8px;padding:6px 10px;font-size:17px"></label>`, { footer: T('Usa la hora de tu iPhone.') });
   if (r.on) {
-    h += section(checkList([[0, 'No, solo el mismo día'], [1, '1 día antes'], [3, '3 días antes'], [7, '1 semana antes'], [14, '2 semanas antes']], r.before, 'remBefore') +
-      (r.before ? `<div class="row"><span class="grow">Avisar también el mismo día</span>${toggle(r.sameDay, 'remToggle', 'data-k="sameDay"')}</div>` : ''), { header: 'Aviso anticipado', footer: 'Podés cambiarlo para una persona en particular desde su ficha.' });
-    h += section(`<div class="row"><span class="grow">Avisar cumples redondos</span>${toggle(r.round, 'remToggle', 'data-k="round"')}</div>` + (r.round ? checkList([[14, '2 semanas antes'], [30, '1 mes antes'], [60, '2 meses antes']], r.roundBefore, 'remRound') : ''), { header: 'Cumpleaños redondos', footer: '18, 30, 40, 50… Te avisamos con más tiempo para que organices algo grande.' });
-    h += section(`<div class="row"><span class="grow">Avisar a la hora del país de cada persona</span>${S.unlocked ? toggle(r.localTz, 'remToggle', 'data-k="localTz"') : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>`, { header: 'Personas en otro país', footer: 'Si alguien vive en otro huso horario, el aviso del día te llega cuando allá ya es su cumple.' });
+    h += section(checkList([[0, T('No, solo el mismo día')], [1, beforeLabel(1)], [3, beforeLabel(3)], [7, beforeLabel(7)], [14, beforeLabel(14)]], r.before, 'remBefore') +
+      (r.before ? `<div class="row"><span class="grow">${T('Avisar también el mismo día')}</span>${toggle(r.sameDay, 'remToggle', 'data-k="sameDay"')}</div>` : ''), { header: T('Aviso anticipado'), footer: T('Podés cambiarlo para una persona en particular desde su ficha.') });
+    h += section(`<div class="row"><span class="grow">${T('Avisar cumples redondos')}</span>${toggle(r.round, 'remToggle', 'data-k="round"')}</div>` + (r.round ? checkList([[14, T('2 semanas antes')], [30, T('1 mes antes')], [60, T('2 meses antes')]], r.roundBefore, 'remRound') : ''), { header: T('Cumpleaños redondos'), footer: T('18, 30, 40, 50… Te avisamos con más tiempo para que organices algo grande.') });
+    h += section(`<div class="row"><span class="grow">${T('Avisar a la hora del país de cada persona')}</span>${S.unlocked ? toggle(r.localTz, 'remToggle', 'data-k="localTz"') : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>`, { header: T('Personas en otro país'), footer: T('Si alguien vive en otro huso horario, el aviso del día te llega cuando allá ya es su cumple.') });
   }
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Recordatorios', blur: true })}<div class="scroll" data-key="rem-scroll">${h}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Recordatorios'), blur: true })}<div class="scroll" data-key="rem-scroll">${h}</div></div>`;
 }
 function screenPinMax() {
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Fechas fijadas', blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([[3, '3'], [4, '4'], [5, '5'], [6, '6'], [8, '8'], [10, '10']], S.pinMax, 'pinMax'), { header: 'Máximo en Widgets', footer: 'Así la pestaña Widgets no se llena. Cuando llegás al máximo, te preguntamos cuál reemplazar.' })}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Fechas fijadas'), blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([[3, '3'], [4, '4'], [5, '5'], [6, '6'], [8, '8'], [10, '10']], S.pinMax, 'pinMax'), { header: T('Máximo en Widgets'), footer: T('Así la pestaña Widgets no se llena. Cuando llegás al máximo, te preguntamos cuál reemplazar.') })}</div></div>`;
 }
 function screenAppearance() {
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Apariencia', blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([['system', 'Igual que el sistema'], ['light', 'Claro'], ['dark', 'Oscuro']], S.theme, 'theme'))}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Apariencia'), blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList([['system', T('Igual que el sistema')], ['light', T('Claro')], ['dark', T('Oscuro')]], S.theme, 'theme'))}</div></div>`;
+}
+// Ajustes → Idioma: cada idioma con su nombre propio y, abajo, cómo se llama en el idioma elegido (como en iOS)
+function screenLanguage() {
+  const names = new Intl.DisplayNames([LOC()], { type: 'language' });
+  const opts = LANGS.map(([k, name, loc]) => [k, name, k === S.lang ? '' : cap(names.of(loc.startsWith('zh') ? 'zh-Hans' : k))]);
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Idioma'), blur: true })}<div class="scroll" style="padding-top:20px">${section(checkList(opts, S.lang, 'lang'), { footer: T('Cambia todos los textos de la app, también las sugerencias de regalo.') })}</div></div>`;
 }
 function screenSpecials() {
   const rows = [...S.specials].sort((a, b) => daysLeft(a.m, a.d) - daysLeft(b.m, b.d)).map(specialRow).join('');
   const sugg = [['💍', 'Casamiento'], ['💞', 'Aniversario'], ['❤️', 'Día de la Madre'], ['🫂', 'Día del Amigo'], ['👔', 'Día del Padre'], ['🧸', 'Día de las Infancias'], ['🎓', 'Graduación']];
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Fechas especiales', right: `<button class="navbtn" data-a="addSpecial">${ic('plus', '', 2.2)}</button>`, blur: true })}<div class="scroll" style="padding-top:20px">${section(rows, { footer: 'Aparecen en la lista junto a los cumpleaños, con su propio aviso.' })}${section(`<div class="chips">${sugg.map(([e, n]) => `<button class="chip" data-a="addSpecialQuick" data-e="${e}" data-n="${n}">${e} ${n}</button>`).join('')}</div>`, { header: 'Sumar rápido' })}</div></div>`;
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Fechas especiales'), right: `<button class="navbtn" data-a="addSpecial">${ic('plus', '', 2.2)}</button>`, blur: true })}<div class="scroll" style="padding-top:20px">${section(rows, { footer: T('Aparecen en la lista junto a los cumpleaños, con su propio aviso.') })}${section(`<div class="chips">${sugg.map(([e, n]) => `<button class="chip" data-a="addSpecialQuick" data-e="${e}" data-n="${n}">${e} ${T(n)}</button>`).join('')}</div>`, { header: T('Sumar rápido') })}</div></div>`;
 }
 function screenShare() {
-  const h = `<div class="empty" style="padding:20px 32px 24px">${ic('people')}<h3>Compartir la lista</h3><p>Tu pareja o familia ven los mismos cumpleaños, gustos y regalos. Así nadie regala lo mismo dos veces.</p></div>` +
-    section(`<div class="row person"><div class="avatar" style="background:linear-gradient(160deg,#ff9a8b,#ff6a88)">S</div><span class="grow">Vos<div class="sub">Dueño de la lista</div></span></div><div class="row person"><div class="avatar" style="background:linear-gradient(160deg,#fbc2eb,#c56cd6)">CG</div><span class="grow">Caro Gómez<div class="sub">Puede editar</div></span><span class="value small">Unida</span></div>`, { header: 'Personas' }) +
-    `<div style="padding:0 16px 20px"><button class="btn-primary" data-a="fake" data-msg="Se abriría Compartir con el link de invitación (iCloud)">${ic('share', '', 2.2)}Invitar a alguien</button></div>` +
-    section(`<div class="row"><span class="grow">Compartir regalos e ideas</span>${toggle(true, 'fake', 'data-msg="Opción de ejemplo"')}</div><div class="row"><span class="grow">Compartir notas de trabajo</span>${toggle(false, 'fake', 'data-msg="Opción de ejemplo"')}</div>`, { footer: 'Se sincroniza con iCloud. Los recordatorios siguen siendo de cada uno.' });
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Compartir lista', blur: true })}<div class="scroll">${h}</div></div>`;
+  const h = `<div class="empty" style="padding:20px 32px 24px">${ic('people')}<h3>${T('Compartir la lista')}</h3><p>${T('Tu pareja o familia ven los mismos cumpleaños, gustos y regalos. Así nadie regala lo mismo dos veces.')}</p></div>` +
+    section(`<div class="row person"><div class="avatar" style="background:linear-gradient(160deg,#ff9a8b,#ff6a88)">S</div><span class="grow">${T('Vos')}<div class="sub">${T('Dueño de la lista')}</div></span></div><div class="row person"><div class="avatar" style="background:linear-gradient(160deg,#fbc2eb,#c56cd6)">CG</div><span class="grow">Caro Gómez<div class="sub">${T('Puede editar')}</div></span><span class="value small">${T('Unida')}</span></div>`, { header: T('Personas') }) +
+    `<div style="padding:0 16px 20px"><button class="btn-primary" data-a="fake" data-msg="Se abriría Compartir con el link de invitación (iCloud)">${ic('share', '', 2.2)}${T('Invitar a alguien')}</button></div>` +
+    section(`<div class="row"><span class="grow">${T('Compartir regalos e ideas')}</span>${toggle(true, 'fake', 'data-msg="Opción de ejemplo"')}</div><div class="row"><span class="grow">${T('Compartir notas de trabajo')}</span>${toggle(false, 'fake', 'data-msg="Opción de ejemplo"')}</div>`, { footer: T('Se sincroniza con iCloud. Los recordatorios siguen siendo de cada uno.') });
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Compartir lista'), blur: true })}<div class="scroll">${h}</div></div>`;
 }
 function screenWork() {
   const wp = S.people.filter(p => p.work);
-  const h = section(`<div class="row"><span class="grow">Mostrar contactos de trabajo</span>${toggle(S.work.on, 'workToggle', 'data-k="on"')}</div><div class="row"><span class="grow">Separarlos en su propia sección</span>${toggle(S.work.section, 'workToggle', 'data-k="section"')}</div>`, { footer: 'Marcá a alguien como “Trabajo” desde Editar. Podés sumarle notas (cargo, qué le gusta, qué evitar).', cls: '' }) +
-    section(wp.map(personRow).join('') || '<div class="row muted">Nadie marcado como trabajo</div>', { header: 'Contactos de trabajo' });
-  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn('Ajustes'), title: 'Modo trabajo', blur: true })}<div class="scroll" style="padding-top:20px">${h}</div></div>`;
+  const h = section(`<div class="row"><span class="grow">${T('Mostrar contactos de trabajo')}</span>${toggle(S.work.on, 'workToggle', 'data-k="on"')}</div><div class="row"><span class="grow">${T('Separarlos en su propia sección')}</span>${toggle(S.work.section, 'workToggle', 'data-k="section"')}</div>`, { footer: T('Marcá a alguien como “Trabajo” desde Editar. Podés sumarle notas (cargo, qué le gusta, qué evitar).'), cls: '' }) +
+    section(wp.map(personRow).join('') || `<div class="row muted">${T('Nadie marcado como trabajo')}</div>`, { header: T('Contactos de trabajo') });
+  return `<div class="screen ${S.pushed ? 'push-in' : ''}">${navbar({ left: backBtn(T('Ajustes')), title: T('Modo trabajo'), blur: true })}<div class="scroll" style="padding-top:20px">${h}</div></div>`;
 }
 
 /* ---------------- Sheets (overlays) ---------------- */
@@ -805,7 +837,7 @@ function wheels(dr, withYear) {
   const days = Array.from({ length: maxD }, (_, i) => i + 1);
   const years = []; for (let y = THIS_YEAR; y >= 1900; y--) years.push(y);
   const col = (k, vals, cur, fmt = v => v, cls = '') => `<div class="wheel ${cls}" data-wheel="${k}" data-index="${Math.max(0, vals.indexOf(cur))}" data-vals="${vals.join(',')}">${vals.map(v => `<div>${fmt(v)}</div>`).join('')}</div>`;
-  return `<div class="wheels">${col('d', days, dr.d)}${col('m', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dr.m, v => cap(MONTHS[v - 1]), 'month')}${withYear ? col('y', years, dr.y, y => { const age = ageOn(dr, y); return `${y}<span class="w-age">${age < 0 ? '' : age === 1 ? '1 año' : `${age} años`}</span>`; }, 'year') : ''}</div>`;
+  return `<div class="wheels">${col('d', days, dr.d)}${col('m', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dr.m, v => cap(monthName(v)), 'month')}${withYear ? col('y', years, dr.y, y => { const age = ageOn(dr, y); return `${y}<span class="w-age">${age < 0 ? '' : TP(age, '{n} año#edad', '{n} años#edad')}</span>`; }, 'year') : ''}</div>`;
 }
 function sheetWrap(o, inner, { medium = false, cellBg = false, short = false } = {}) {
   return `<div class="dim ${o.fresh ? 'anim' : ''}" data-a="dimTap"></div><div class="sheet ${o.fresh ? 'anim' : ''} ${medium ? 'medium' : ''} ${short ? 'short' : ''} ${cellBg ? 'cell-bg' : ''}">${medium ? '<div class="grabber"></div>' : ''}${inner}</div>`;
@@ -817,24 +849,24 @@ function sheetEditor(o) {
   const dr = o.draft, editing = !!o.id;
   let h = editing ? '' : addKindSwitch('cumple');
   const face = dr.photo ? `<div class="avatar photo" style="background-image:${photoBg(dr)}"></div>` : `<div class="avatar" style="background:linear-gradient(160deg,#ff8a95,#e23d4a 60%,#b31b55)">${dr.name.trim() ? esc(initials(dr.name)) : ic('person', '', 1.8).replace('<svg', '<svg style="width:26px;height:26px"')}</div>`;
-  h += `<div class="ed-head"><button class="ed-photo" data-a="edPhoto" aria-label="${dr.photo ? 'Cambiar foto' : 'Agregar foto'}">${face}<span class="ed-cam">${ic('camera', '', 2)}</span></button><input class="field" id="edName" placeholder="Nombre" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"><button class="ed-find" data-a="findContact">${ic('search', '', 2.2)}Buscar</button></div>`;
-  h += section(`<div class="row"><span class="grow">Incluir año de nacimiento</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">El 29 de febrero solo existe en años bisiestos.</div>` : ''}`,
-    { header: 'Fecha', footer: dr.includeYear ? '' : 'Sin año no mostramos la edad, solo el día y el mes.' });
-  if (!editing) h += `<button class="bulk-btn" data-a="bulkAdd"><span class="kp-ic">${ic('people', '', 2)}</span><span class="grow">Agregar masivamente contactos<div class="sub">Elegí varios de tu agenda de una vez</div></span>${chev()}</button>`;
-  h += section(`<div class="row has-icon"><span class="icon-sq" style="background:#5856d6">${ic('briefcase', '', 2)}</span><span class="grow">Es de trabajo</span>${S.unlocked ? toggle(dr.work, 'edWork') : `<button data-a="paywall" data-f="work">${lockBadge()}</button>`}</div>` +
-    `<div class="row has-icon"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">Vive en otro país</span>${S.unlocked ? `<span class="value">${dr.tz || 'No'}</span>` : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>` +
-    `<div class="row"><textarea class="field" id="edNotes" placeholder="Notas (talle, alergias, qué evitar…)">${esc(dr.notes || '')}</textarea></div>`, { header: 'Más' });
-  if (editing) h += section(`<button class="row destructive" data-a="askDelete">Eliminar persona</button>`);
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: editing ? 'Editar' : '', right: `<button class="navbtn bold" id="saveBtn" data-a="edSave" ${canSave(dr) ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll" data-key="editor">${h}</div>`);
+  h += `<div class="ed-head"><button class="ed-photo" data-a="edPhoto" aria-label="${T(dr.photo ? 'Cambiar foto' : 'Agregar foto')}">${face}<span class="ed-cam">${ic('camera', '', 2)}</span></button><input class="field" id="edName" placeholder="${T('Nombre')}" value="${esc(dr.name)}" autocomplete="off" autocapitalize="words"><button class="ed-find" data-a="findContact">${ic('search', '', 2.2)}${T('Buscar')}</button></div>`;
+  h += section(`<div class="row"><span class="grow">${T('Incluir año de nacimiento')}</span>${toggle(dr.includeYear, 'edYear')}</div>${wheels(dr, dr.includeYear)}${leapErr(dr) ? `<div class="row" style="color:#ff3b30;font-size:13px">${T('El 29 de febrero solo existe en años bisiestos.')}</div>` : ''}`,
+    { header: T('Fecha'), footer: dr.includeYear ? '' : T('Sin año no mostramos la edad, solo el día y el mes.') });
+  if (!editing) h += `<button class="bulk-btn" data-a="bulkAdd"><span class="kp-ic">${ic('people', '', 2)}</span><span class="grow">${T('Agregar masivamente contactos')}<div class="sub">${T('Elegí varios de tu agenda de una vez')}</div></span>${chev()}</button>`;
+  h += section(`<div class="row has-icon"><span class="icon-sq" style="background:#5856d6">${ic('briefcase', '', 2)}</span><span class="grow">${T('Es de trabajo')}</span>${S.unlocked ? toggle(dr.work, 'edWork') : `<button data-a="paywall" data-f="work">${lockBadge()}</button>`}</div>` +
+    `<div class="row has-icon"><span class="icon-sq" style="background:#007aff">${ic('globe', '', 2)}</span><span class="grow">${T('Vive en otro país')}</span>${S.unlocked ? `<span class="value">${dr.tz ? T(dr.tz) : T('No')}</span>` : `<button data-a="paywall" data-f="tz">${lockBadge()}</button>`}</div>` +
+    `<div class="row"><textarea class="field" id="edNotes" placeholder="${T('Notas (talle, alergias, qué evitar…)')}">${esc(dr.notes || '')}</textarea></div>`, { header: T('Más') });
+  if (editing) h += section(`<button class="row destructive" data-a="askDelete">${T('Eliminar persona')}</button>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: editing ? T('Editar') : '', right: `<button class="navbtn bold" id="saveBtn" data-a="edSave" ${canSave(dr) ? '' : 'disabled'}>${T('Guardar')}</button>` }) + `<div class="scroll" data-key="editor">${h}</div>`);
 }
 
 // "Buscar" al lado del nombre: elegís un contacto y completa nombre, foto y fecha si la tiene
 function sheetFindContact(o) {
   const q = o.q.trim().toLowerCase();
   const list = AGENDA.filter(c => !q || c.name.toLowerCase().includes(q));
-  const rows = list.map(c => `<button class="row" data-a="findPick" data-id="${c.id}">${avatar(c)}<span class="grow"><div>${esc(c.name)}</div><div class="sub">${c.m ? esc(subtitle(c)) : 'Sin cumpleaños'}</div></span></button>`).join('');
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Contactos' }) +
-    `<div class="scroll"><label class="search">${ic('search', '', 2.2)}<input id="findQ" type="search" placeholder="Buscar" value="${esc(o.q)}" autocomplete="off"></label>${list.length ? section(rows, { header: `${list.length} contactos` }) : `<div class="empty"><p>No hay contactos con ese nombre.</p></div>`}</div>`);
+  const rows = list.map(c => `<button class="row" data-a="findPick" data-id="${c.id}">${avatar(c)}<span class="grow"><div>${esc(c.name)}</div><div class="sub">${c.m ? esc(subtitle(c)) : T('Sin cumpleaños')}</div></span></button>`).join('');
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: T('Contactos') }) +
+    `<div class="scroll"><label class="search">${ic('search', '', 2.2)}<input id="findQ" type="search" placeholder="${T('Buscar')}" value="${esc(o.q)}" autocomplete="off"></label>${list.length ? section(rows, { header: TP(list.length, '{n} contacto', '{n} contactos') }) : `<div class="empty"><p>${T('No hay contactos con ese nombre.')}</p></div>`}</div>`);
 }
 function sheetImport(o) {
   if (o.rows) return sheetBulkReview(o);
@@ -843,11 +875,11 @@ function sheetImport(o) {
   const all = selectable.length && selectable.every(c => sel.has(c.id));
   const rows = AGENDA.map(c => {
     const d = dupe(c), on = sel.has(c.id);
-    return `<button class="row" data-a="impToggle" data-id="${c.id}" ${d ? 'disabled style="opacity:.55"' : ''}><span style="color:${on && !d ? 'var(--accent)' : 'var(--label3)'}">${ic(d ? 'minusCircle' : on ? 'checkCircle' : 'circle', 'check', 1.6).replace('class="check"', 'class="check" style="width:24px;height:24px"')}</span><span class="grow"><div>${esc(c.name)}</div><div class="sub">${c.m ? esc(subtitle(c)) : 'Sin cumpleaños: lo elegís en el paso siguiente'}</div></span>${d ? '<span class="small muted">Ya está</span>' : ''}</button>`;
+    return `<button class="row" data-a="impToggle" data-id="${c.id}" ${d ? 'disabled style="opacity:.55"' : ''}><span style="color:${on && !d ? 'var(--accent)' : 'var(--label3)'}">${ic(d ? 'minusCircle' : on ? 'checkCircle' : 'circle', 'check', 1.6).replace('class="check"', 'class="check" style="width:24px;height:24px"')}</span><span class="grow"><div>${esc(c.name)}</div><div class="sub">${c.m ? esc(subtitle(c)) : T('Sin cumpleaños: lo elegís en el paso siguiente')}</div></span>${d ? `<span class="small muted">${T('Ya está')}</span>` : ''}</button>`;
   }).join('');
   const n = sel.size;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Importar', right: `<button class="navbtn bold" data-a="impNext" ${n ? '' : 'disabled'}>${n ? `Siguiente (${n})` : 'Siguiente'}</button>` }) +
-    `<div class="scroll">${section(rows, { header: `${AGENDA.length} contactos`, footer: 'Los que ya están en la app quedan deshabilitados.' })}</div><div style="padding:10px 16px calc(var(--safe-bottom) + 8px);border-top:.5px solid var(--sep);background:var(--bar);text-align:center"><button class="navbtn" data-a="impAll">${all ? 'Quitar selección' : 'Seleccionar todos'}</button></div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: T('Importar'), right: `<button class="navbtn bold" data-a="impNext" ${n ? '' : 'disabled'}>${n ? `${T('Siguiente')} (${n})` : T('Siguiente')}</button>` }) +
+    `<div class="scroll">${section(rows, { header: TP(AGENDA.length, '{n} contacto', '{n} contactos'), footer: T('Los que ya están en la app quedan deshabilitados.') })}</div><div style="padding:10px 16px calc(var(--safe-bottom) + 8px);border-top:.5px solid var(--sep);background:var(--bar);text-align:center"><button class="navbtn" data-a="impAll">${T(all ? 'Quitar selección' : 'Seleccionar todos')}</button></div>`);
 }
 
 const rowOk = r => r.name.trim() && r.m && r.d;
@@ -855,67 +887,67 @@ function sheetBulkReview(o) {
   const yrs = []; for (let y = THIS_YEAR; y >= 1900; y--) yrs.push(y);
   const ph = (t, cur) => cur ? '' : `<option value="" selected disabled>${t}</option>`;
   const opts = (vals, cur, fmt = v => v) => vals.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${fmt(v)}</option>`).join('');
-  const rows = o.rows.map(r => `<div class="row bulk-row">${avatar(r)}<div class="grow"><input class="field bulk-name" data-id="${r.id}" value="${esc(r.name)}" placeholder="Nombre" autocomplete="off" autocapitalize="words"><div class="bulk-date">
-    <select data-bulk="d" data-id="${r.id}" class="${r.d ? '' : 'empty'}">${ph('Día', r.d)}${opts(Array.from({ length: r.m ? daysIn(r.m, r.y) : 31 }, (_, i) => i + 1), r.d)}</select>
-    <select data-bulk="m" data-id="${r.id}" class="${r.m ? '' : 'empty'}">${ph('Mes', r.m)}${opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], r.m, v => cap(MONTHS[v - 1]))}</select>
-    <select data-bulk="y" data-id="${r.id}"><option value="" ${r.y ? '' : 'selected'}>Sin año</option>${opts(yrs, r.y)}</select></div></div></div>`).join('');
+  const rows = o.rows.map(r => `<div class="row bulk-row">${avatar(r)}<div class="grow"><input class="field bulk-name" data-id="${r.id}" value="${esc(r.name)}" placeholder="${T('Nombre')}" autocomplete="off" autocapitalize="words"><div class="bulk-date">
+    <select data-bulk="d" data-id="${r.id}" class="${r.d ? '' : 'empty'}">${ph(T('Día'), r.d)}${opts(Array.from({ length: r.m ? daysIn(r.m, r.y) : 31 }, (_, i) => i + 1), r.d)}</select>
+    <select data-bulk="m" data-id="${r.id}" class="${r.m ? '' : 'empty'}">${ph(T('Mes'), r.m)}${opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], r.m, v => cap(monthName(v)))}</select>
+    <select data-bulk="y" data-id="${r.id}"><option value="" ${r.y ? '' : 'selected'}>${T('Sin año')}</option>${opts(yrs, r.y)}</select></div></div></div>`).join('');
   const ok = o.rows.every(rowOk), falta = o.rows.filter(r => !r.m || !r.d).length;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="impBack">Atrás</button>`, title: 'Revisar', right: `<button class="navbtn bold" id="saveBtn" data-a="impAdd" ${ok ? '' : 'disabled'}>Agregar (${o.rows.length})</button>` }) +
-    `<div class="scroll">${section(rows, { header: 'Nombre y fecha', footer: (falta ? `Falta elegir el cumple de ${falta} ${falta === 1 ? 'contacto' : 'contactos'}. ` : '') + 'Dejá el nombre del contacto o cambialo por cómo le decís vos. El año es opcional: sin año no mostramos la edad.' })}</div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="impBack">${T('Atrás')}</button>`, title: T('Revisar'), right: `<button class="navbtn bold" id="saveBtn" data-a="impAdd" ${ok ? '' : 'disabled'}>${T('Agregar')} (${o.rows.length})</button>` }) +
+    `<div class="scroll">${section(rows, { header: T('Nombre y fecha'), footer: (falta ? TP(falta, 'Falta elegir el cumple de {n} contacto.', 'Falta elegir el cumple de {n} contactos.') + ' ' : '') + T('Dejá el nombre del contacto o cambialo por cómo le decís vos. El año es opcional: sin año no mostramos la edad.') })}</div>`);
 }
 
 function giftWarning(p, text) {
   if (!text.trim()) return '';
-  const prev = p.gifts.find(g => similar(g.what, text));
-  return prev ? `<div class="warn">${ic('warn', '', 2)}<div><b>Ya se lo regalaste</b> en ${prev.year}: “${esc(prev.what)}”.</div></div>` : '';
+  const prev = p.gifts.find(g => similar(T(g.what), text));
+  return prev ? `<div class="warn">${ic('warn', '', 2)}<div>${T('<b>Ya se lo regalaste</b> en {y}: “{what}”.', { y: prev.year, what: esc(T(prev.what)) })}</div></div>` : '';
 }
 function sheetGift(o) {
   const p = person(o.id), dr = o.draft, isIdea = o.s === 'idea';
   const years = []; for (let y = THIS_YEAR; y >= THIS_YEAR - 8; y--) years.push(y);
-  let h = section(`<div class="row"><input class="field" id="giftWhat" placeholder="${isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica'}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: isIdea ? 'Idea' : 'Qué le regalaste' });
-  if (!isIdea) h += section(`<label class="row"><span class="grow">Año</span><select id="giftYear" style="border:0;background:transparent;color:var(--label2);font-size:17px;text-align:right">${years.map(y => `<option ${y === dr.year ? 'selected' : ''}>${y}</option>`).join('')}</select>${chev()}</label>`);
-  else h += section(`<div class="row"><input class="field" placeholder="Link (opcional)" autocomplete="off"></div>`, { footer: 'Tip: desde Safari o Mercado Libre tocá Compartir → Unforgettables y se guarda solo.' });
-  if (p.gifts.length) h += section(p.gifts.map(g => `<div class="row"><span class="grow">${esc(g.what)}</span><span class="value">${g.year}</span></div>`).join(''), { header: `Ya le regalaste a ${esc(p.name.split(' ')[0])}` });
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: isIdea ? 'Nueva idea' : 'Nuevo regalo', right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>Guardar</button>` }) + `<div class="scroll">${h}</div>`);
+  let h = section(`<div class="row"><input class="field" id="giftWhat" placeholder="${T(isIdea ? 'Ej: Vinilo de Taylor Swift' : 'Ej: Taza de cerámica')}" value="${esc(dr.what)}" autocomplete="off"></div><div id="giftWarn">${giftWarning(p, dr.what)}</div>`, { header: T(isIdea ? 'Idea' : 'Qué le regalaste') });
+  if (!isIdea) h += section(`<label class="row"><span class="grow">${T('Año')}</span><select id="giftYear" style="border:0;background:transparent;color:var(--label2);font-size:17px;text-align:right">${years.map(y => `<option ${y === dr.year ? 'selected' : ''}>${y}</option>`).join('')}</select>${chev()}</label>`);
+  else h += section(`<div class="row"><input class="field" placeholder="${T('Link (opcional)')}" autocomplete="off"></div>`, { footer: T('Tip: desde Safari o Mercado Libre tocá Compartir → Unforgettables y se guarda solo.') });
+  if (p.gifts.length) h += section(p.gifts.map(g => `<div class="row"><span class="grow">${esc(T(g.what))}</span><span class="value">${g.year}</span></div>`).join(''), { header: T('Ya le regalaste a {name}', { name: esc(p.name.split(' ')[0]) }) });
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: T(isIdea ? 'Nueva idea' : 'Nuevo regalo'), right: `<button class="navbtn bold" id="saveBtn" data-a="giftSave" ${dr.what.trim() ? '' : 'disabled'}>${T('Guardar')}</button>` }) + `<div class="scroll">${h}</div>`);
 }
 function gustoChips(o) {
   const p = person(o.id), q = gNorm(o.text.trim());
-  const chip = w => `<button class="chip ${p.gustos.includes(w) ? 'sel' : ''}" data-a="gustoToggle" data-v="${esc(w)}">${esc(w)}</button>`;
+  const chip = w => `<button class="chip ${p.gustos.some(g => T(g) === w) ? 'sel' : ''}" data-a="gustoToggle" data-v="${esc(w)}">${esc(w)}</button>`;
   let h = '';
   if (q) {
-    const hits = GUSTO_LIST.filter(([w]) => gNorm(w).includes(q)).map(([w]) => w);
-    const exact = hits.some(w => gNorm(w) === q) || p.gustos.some(g => gNorm(g) === q);
-    h += section(`<div class="chips">${hits.map(chip).join('')}${exact ? '' : `<button class="chip add" data-a="gustoToggle" data-v="${esc(o.text.trim())}">＋ Agregar “${esc(o.text.trim())}”</button>`}</div>`, { header: 'Resultados' });
+    const hits = gustoList().filter(([w]) => gNorm(w).includes(q)).map(([w]) => w);
+    const exact = hits.some(w => gNorm(w) === q) || p.gustos.some(g => gNorm(T(g)) === q);
+    h += section(`<div class="chips">${hits.map(chip).join('')}${exact ? '' : `<button class="chip add" data-a="gustoToggle" data-v="${esc(o.text.trim())}">＋ ${T('Agregar “{x}”', { x: esc(o.text.trim()) })}</button>`}</div>`, { header: T('Resultados') });
   } else {
-    for (const [cat, items] of GUSTOS) h += section(`<div class="chips">${items.map(([w]) => chip(w)).join('')}</div>`, { header: cat });
+    for (const [cat, items] of gustosBase()) h += section(`<div class="chips">${items.map(([w]) => chip(w)).join('')}</div>`, { header: cat });
   }
   return h;
 }
 function sheetGusto(o) {
   const p = person(o.id), first = esc(p.name.split(' ')[0]);
-  const mine = p.gustos.length ? `<div class="chips">${p.gustos.map(g => `<button class="chip sel" data-a="gustoToggle" data-v="${esc(g)}">${esc(g)} ✕</button>`).join('')}</div>` : `<div class="row"><span class="grow sub" style="margin:0">Tocá los que le gustan. Con eso armamos las sugerencias de regalo.</span></div>`;
-  return sheetWrap(o, navbar({ left: '', title: `Gustos de ${first}`, right: `<button class="navbtn bold" data-a="dismiss">Listo</button>` }) +
-    `<div class="scroll"><label class="search">${ic('search', '', 2.2)}<input id="gustoText" type="search" placeholder="Buscar o escribir un gusto" value="${esc(o.text)}" autocomplete="off"></label>${section(mine, { header: `Le gusta (${p.gustos.length})` })}<div id="gustoList">${gustoChips(o)}</div></div>`);
+  const mine = p.gustos.length ? `<div class="chips">${p.gustos.map(g => `<button class="chip sel" data-a="gustoToggle" data-v="${esc(g)}">${esc(T(g))} ✕</button>`).join('')}</div>` : `<div class="row"><span class="grow sub" style="margin:0">${T('Tocá los que le gustan. Con eso armamos las sugerencias de regalo.')}</span></div>`;
+  return sheetWrap(o, navbar({ left: '', title: T('Gustos de {name}', { name: first }), right: `<button class="navbtn bold" data-a="dismiss">${T('Listo')}</button>` }) +
+    `<div class="scroll"><label class="search">${ic('search', '', 2.2)}<input id="gustoText" type="search" placeholder="${T('Buscar o escribir un gusto')}" value="${esc(o.text)}" autocomplete="off"></label>${section(mine, { header: `${T('Le gusta')} (${p.gustos.length})` })}<div id="gustoList">${gustoChips(o)}</div></div>`);
 }
 function sheetRemindPerson(o) {
   const p = person(o.id);
-  const opts = [['null', `Usar el general (${beforeLabel(S.rem.before).toLowerCase()})`], [0, 'Solo el mismo día'], [1, '1 día antes'], [3, '3 días antes'], [7, '1 semana antes'], [14, '2 semanas antes']];
-  return sheetWrap(o, navbar({ title: `Aviso para ${p.name.split(' ')[0]}`, right: `<button class="navbtn bold" data-a="dismiss">OK</button>` }) + `<div class="scroll">${section(checkList(opts, p.remind == null ? 'null' : p.remind, 'remPersonSet'))}</div>`, { medium: true });
+  const opts = [['null', T('Usar el general ({x})', { x: beforeLabel(S.rem.before).toLowerCase() })], ...[0, 1, 3, 7, 14].map(n => [n, beforeLabel(n)])];
+  return sheetWrap(o, navbar({ title: T('Aviso para {name}', { name: p.name.split(' ')[0] }), right: `<button class="navbtn bold" data-a="dismiss">${T('OK')}</button>` }) + `<div class="scroll">${section(checkList(opts, p.remind == null ? 'null' : p.remind, 'remPersonSet'))}</div>`, { medium: true });
 }
 function sheetTz(o) {
   const p = person(o.id);
-  const opts = [['null', 'Igual que vos (Buenos Aires)'], ['Madrid', 'Madrid (+5 h)'], ['Miami', 'Miami (−1 h)'], ['Ciudad de México', 'Ciudad de México (−3 h)'], ['Sídney', 'Sídney (+14 h)']];
-  return sheetWrap(o, navbar({ title: 'Dónde vive', right: `<button class="navbtn bold" data-a="dismiss">OK</button>` }) + `<div class="scroll">${section(checkList(opts, p.tz ?? 'null', 'tzSet'), { footer: 'El aviso del día te llega cuando allá ya es su cumple.' })}</div>`, { medium: true });
+  const opts = [['null', T('Igual que vos (Buenos Aires)')], ['Madrid', `${T('Madrid')} (+5 h)`], ['Miami', `${T('Miami')} (−1 h)`], ['Ciudad de México', `${T('Ciudad de México')} (−3 h)`], ['Sídney', `${T('Sídney')} (+14 h)`]];
+  return sheetWrap(o, navbar({ title: T('Dónde vive'), right: `<button class="navbtn bold" data-a="dismiss">${T('OK')}</button>` }) + `<div class="scroll">${section(checkList(opts, p.tz ?? 'null', 'tzSet'), { footer: T('El aviso del día te llega cuando allá ya es su cumple.') })}</div>`, { medium: true });
 }
 // Selector de arriba al tocar +: qué querés agregar
 // Mismo estilo que los banners del inicio: el elegido se pinta con su degradé (confeti o corazones)
-const kindBtn = (k, cur, label, icon, deco) => `<button class="kp ${k}${cur === k ? ' sel' : ''}" data-a="addKind" data-v="${k}">${cur === k ? `<span class="${deco}"></span>` : ''}<span class="kp-ic">${ic(icon, '', 2)}</span><span class="kp-t">${label}</span>${k === 'fecha' && !S.unlocked ? ic('lock', 'kp-lock', 2.6) : ''}</button>`;
+const kindBtn = (k, cur, label, icon, deco) => `<button class="kp ${k}${cur === k ? ' sel' : ''}" data-a="addKind" data-v="${k}">${cur === k ? `<span class="${deco}"></span>` : ''}<span class="kp-ic">${ic(icon, '', 2)}</span><span class="kp-t">${T(label)}</span>${k === 'fecha' && !S.unlocked ? ic('lock', 'kp-lock', 2.6) : ''}</button>`;
 const addKindSwitch = cur => `<div class="kind-pick">${kindBtn('cumple', cur, 'Cumpleaños', 'cake', 'confetti')}${kindBtn('fecha', cur, 'Fecha', 'heart', 'hearts')}</div>`;
 function sheetAddSpecial(o) {
   const dr = o.draft;
   const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Día especial', '⭐️']];
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: dr.id ? 'Editar fecha' : o.fromPlus ? '' : 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
-    `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">${T('Cancelar')}</button>`, title: dr.id ? T('Editar fecha') : o.fromPlus ? '' : T('Nueva fecha'), right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>${T('Guardar')}</button>` }) +
+    `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="${T('Ej: Aniversario con Caro')}" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: T('Nombre') })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${T(k)}</button>`).join('')}</div>${section(wheels(dr, false), { header: T('Fecha') })}</div>`);
 }
 
 // Ordenadas de la más importante a la menos
@@ -933,29 +965,29 @@ const FEATURES = [
 ];
 const FEATURE_NAMES = { pin: 'Mostrar una fecha en un widget', specials: 'Fechas especiales', ideas: 'Ideas de regalo', tz: 'El aviso por país', share: 'Compartir la lista', work: 'El modo trabajo', widgetsTab: 'Personalizar widgets', theme: 'Elegir el diseño y el color', cal: 'El widget calendario', lock: 'El widget de bloqueo' };
 function sheetPaywall(o) {
-  const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`).join('');
-  const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>Desbloqueá todo</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${FEATURE_NAMES[o.feature]} es parte del desbloqueo</span></div>` : ''}<p class="lead">${o.soft ? 'Tu app ya está lista y es gratis. Si querés más, ' : ''}${o.soft ? 'un' : 'Un'} solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.</p>
+  const f = (arr) => arr.map(([icon, color, t, s, keys]) => `<div class="feat" ${keys.includes(o.feature) ? 'style="background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:12px"' : ''}><span class="icon-sq" style="background:${color}">${ic(icon, '', 2)}</span><div><div class="t">${T(t)}</div><div class="s">${T(s)}</div></div></div>`).join('');
+  const h = `<div class="paywall"><div class="hero-icon">🎁</div><h1>${T('Desbloqueá todo')}</h1>${FEATURE_NAMES[o.feature] ? `<div style="text-align:center;margin-top:10px"><span class="lock-badge" style="font-size:13px;padding:5px 11px">${ic('lock', '', 2.4)}${T('{f} es parte del desbloqueo', { f: T(FEATURE_NAMES[o.feature]) })}</span></div>` : ''}<p class="lead">${T(o.soft ? 'Tu app ya está lista y es gratis. Si querés más, un solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.' : 'Un solo pago de <b>USD 4,99</b>, para siempre. Sin suscripción.')}</p>
     <div style="margin-top:18px;padding-bottom:10px">${f(FEATURES)}</div></div>`;
-  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss" aria-label="Cerrar" style="color:var(--label2)"><svg viewBox="0 0 24 24" style="width:30px;height:30px"><circle cx="12" cy="12" r="11" fill="var(--fill)"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` }) +
-    `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">Desbloquear por USD 4,99</button><div class="fine">Pago único · Sin publicidad · Se cobra a tu Apple ID · Vale en todos tus dispositivos</div>${o.soft ? '<button class="btn-plain" data-a="dismiss">Ahora no</button>' : ''}<div class="links"><button data-a="restore">Restaurar compra</button><button data-a="fake" data-msg="Abriría los Términos">Términos</button><button data-a="fake" data-msg="Abriría la Privacidad">Privacidad</button></div></div></div>`);
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss" aria-label="${T('Cerrar')}" style="color:var(--label2)"><svg viewBox="0 0 24 24" style="width:30px;height:30px"><circle cx="12" cy="12" r="11" fill="var(--fill)"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` }) +
+    `<div class="scroll" style="padding-bottom:0">${h}<div class="pw-footer"><button class="btn-primary" data-a="buy">${T('Desbloquear por USD 4,99')}</button><div class="fine">${T('Pago único · Sin publicidad · Se cobra a tu Apple ID · Vale en todos tus dispositivos')}</div>${o.soft ? `<button class="btn-plain" data-a="dismiss">${T('Ahora no')}</button>` : ''}<div class="links"><button data-a="restore">${T('Restaurar compra')}</button><button data-a="fake" data-msg="Abriría los Términos">${T('Términos')}</button><button data-a="fake" data-msg="Abriría la Privacidad">${T('Privacidad')}</button></div></div></div>`);
 }
 function sheetStore(o) {
-  return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">${appIcon()}</div><div style="flex:1"><div style="font-weight:600">Desbloquear todo</div><div class="muted small">Unforgettables · Compra dentro de la app</div></div></div><div class="kv"><span>Precio</span><span>USD 4,99 · pago único</span></div><div class="kv"><span>Cuenta</span><span>tu Apple ID</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : 'Comprar'}</button><button class="btn-plain" data-a="dismiss">Cancelar</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(Simulación de App Store — no se cobra nada)</div></div>`, { medium: true, short: true, cellBg: true });
+  return sheetWrap(o, `<div class="store"><div class="head"><div class="appic">${appIcon()}</div><div style="flex:1"><div style="font-weight:600">${T('Desbloquear todo')}</div><div class="muted small">Unforgettables · ${T('Compra dentro de la app')}</div></div></div><div class="kv"><span>${T('Precio')}</span><span>${T('USD 4,99 · pago único')}</span></div><div class="kv"><span>${T('Cuenta')}</span><span>${T('tu Apple ID')}</span></div><div style="padding:18px 0 8px"><button class="btn-primary" data-a="confirmBuy" style="background:var(--blue)">${o.busy ? '<span class="spinner"></span>' : T('Comprar')}</button><button class="btn-plain" data-a="dismiss">${T('Cancelar')}</button></div><div class="small muted" style="text-align:center;padding-bottom:calc(var(--safe-bottom) + 16px)">(${T('Simulación de App Store — no se cobra nada')})</div></div>`, { medium: true, short: true, cellBg: true });
 }
 
 function coverOnboarding(o) {
   const st = o.step;
   const dots = `<div class="dots">${[0, 1, 2, 3].map(i => `<span class="${i === st ? 'sel' : ''}"></span>`).join('')}</div>`;
   let art = '', title = '', text = '', btns = '';
-  if (st === 0) { art = '🎂'; title = 'Nunca más te olvidás de un cumple'; text = 'Cuántos años cumple, cuánto falta y qué le regalaste la última vez. Todo en tu iPhone.'; btns = `<button class="btn-primary" data-a="obNext">Empezar</button>`; }
+  if (st === 0) { art = '🎂'; title = T('Nunca más te olvidás de un cumple'); text = T('Cuántos años cumple, cuánto falta y qué le regalaste la última vez. Todo en tu iPhone.'); btns = `<button class="btn-primary" data-a="obNext">${T('Empezar')}</button>`; }
   if (st === 1) {
     const cands = CONTACTS.filter(c => !S.people.some(p => p.name === c.name));
-    art = `<div style="width:100%;font-size:17px">${section(cands.slice(0, 5).map(c => `<div class="row"><span style="color:var(--accent)">${ic('checkCircle', 'check', 1.6).replace('class="check"', 'class="check" style="width:22px;height:22px"')}</span><span class="grow">${esc(c.name)}<div class="sub">${esc(subtitle(c))}</div></span></div>`).join('') + (cands.length > 5 ? `<div class="row muted small">y ${cands.length - 5} más…</div>` : ''), { cls: 'mt0' }).replace('class="section ', 'style="margin:0" class="section ')}</div>`;
-    title = 'Traé los cumples de Contactos'; text = cands.length ? `Encontramos ${cands.length} contactos con cumpleaños.` : 'Ya importaste todos tus contactos con cumpleaños.';
-    btns = `<button class="btn-primary" data-a="obImport">${cands.length ? `Importar ${cands.length}` : 'Seguir'}</button><button class="btn-plain" data-a="obNext">Ahora no, los cargo a mano</button>`;
+    art = `<div style="width:100%;font-size:17px">${section(cands.slice(0, 5).map(c => `<div class="row"><span style="color:var(--accent)">${ic('checkCircle', 'check', 1.6).replace('class="check"', 'class="check" style="width:22px;height:22px"')}</span><span class="grow">${esc(c.name)}<div class="sub">${esc(subtitle(c))}</div></span></div>`).join('') + (cands.length > 5 ? `<div class="row muted small">${T('y {n} más…', { n: cands.length - 5 })}</div>` : ''), { cls: 'mt0' }).replace('class="section ', 'style="margin:0" class="section ')}</div>`;
+    title = T('Traé los cumples de Contactos'); text = cands.length ? TP(cands.length, 'Encontramos {n} contacto con cumpleaños.', 'Encontramos {n} contactos con cumpleaños.') : T('Ya importaste todos tus contactos con cumpleaños.');
+    btns = `<button class="btn-primary" data-a="obImport">${cands.length ? T('Importar {n}', { n: cands.length }) : T('Seguir')}</button><button class="btn-plain" data-a="obNext">${T('Ahora no, los cargo a mano')}</button>`;
   }
-  if (st === 2) { const p = nextPeople(1)[0]; art = `<div class="notif-mock"><div class="app-ic">${appIcon()}</div><div style="flex:1"><div class="h">Unforgettables<span>09:00</span></div><div>En 3 días cumple ${esc(p ? p.name : 'Mora')} 🎈</div><div class="muted small">Tocá para ver ideas de regalo</div></div></div>`; title = 'Te avisamos con tiempo'; text = 'Un aviso 3 días antes y otro el mismo día. Lo cambiás cuando quieras.'; btns = `<button class="btn-primary" data-a="obNotif">Activar avisos</button><button class="btn-plain" data-a="obNext">Ahora no</button>`; }
-  if (st === 3) { art = `<div style="width:100%">${section(nextPeople(3).map(p => `<div class="row person">${avatar(p)}<span class="grow"><div class="title-semibold">${esc(p.name)}</div><div class="sub">${esc(subtitle(p))}</div></span>${countdown(daysLeft(p.m, p.d))}</div>`).join(''), {}).replace('class="section ', 'style="margin:0" class="section ')}</div>`; title = '¡Listo, tu app ya está armada!'; text = `Tenés ${S.people.length} cumpleaños cargados y los avisos listos.`; btns = `<button class="btn-primary" data-a="obDone">Ver mis cumpleaños</button>`; }
+  if (st === 2) { const p = nextPeople(1)[0]; art = `<div class="notif-mock"><div class="app-ic">${appIcon()}</div><div style="flex:1"><div class="h">Unforgettables<span>09:00</span></div><div>${TP(3, 'En {n} día cumple {name}', 'En {n} días cumple {name}', { name: esc(p ? p.name : 'Mora') })} 🎈</div><div class="muted small">${T('Tocá para ver ideas de regalo')}</div></div></div>`; title = T('Te avisamos con tiempo'); text = T('Un aviso 3 días antes y otro el mismo día. Lo cambiás cuando quieras.'); btns = `<button class="btn-primary" data-a="obNotif">${T('Activar avisos')}</button><button class="btn-plain" data-a="obNext">${T('Ahora no')}</button>`; }
+  if (st === 3) { art = `<div style="width:100%">${section(nextPeople(3).map(p => `<div class="row person">${avatar(p)}<span class="grow"><div class="title-semibold">${esc(p.name)}</div><div class="sub">${esc(subtitle(p))}</div></span>${countdown(daysLeft(p.m, p.d))}</div>`).join(''), {}).replace('class="section ', 'style="margin:0" class="section ')}</div>`; title = T('¡Listo, tu app ya está armada!'); text = TP(S.people.length, 'Tenés {n} cumpleaños cargado y los avisos listos.', 'Tenés {n} cumpleaños cargados y los avisos listos.'); btns = `<button class="btn-primary" data-a="obDone">${T('Ver mis cumpleaños')}</button>`; }
   return `<div class="full-cover ${o.fresh ? 'anim' : ''}"><div class="ob"><div class="art">${art}</div><h1>${title}</h1><p>${text}</p>${dots}<div class="stack">${btns}</div></div></div>`;
 }
 
@@ -963,12 +995,12 @@ const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetF
 
 function dialogHtml(d) {
   if (d.type === 'alert') return `<div class="alert-wrap"><div class="alert ${d.fresh ? 'anim' : ''}"><div class="body"><div class="t">${d.title}</div><div class="m">${d.msg}</div></div><div class="btns">${d.buttons.map(b => `<button data-a="${b.a}">${b.label}</button>`).join('')}</div></div></div>`;
-  return `<div class="dim" data-a="dialogCancel" style="z-index:79"></div><div class="action-sheet ${d.fresh ? 'anim' : ''}"><div class="group"><div class="msg">${d.title}</div>${d.actions.map(x => `<button class="${x.destructive ? 'destructive' : ''}" data-a="${x.a}" ${x.extra || ''}>${x.label}</button>`).join('')}</div><button class="cancel" data-a="dialogCancel">Cancelar</button></div>`;
+  return `<div class="dim" data-a="dialogCancel" style="z-index:79"></div><div class="action-sheet ${d.fresh ? 'anim' : ''}"><div class="group"><div class="msg">${d.title}</div>${d.actions.map(x => `<button class="${x.destructive ? 'destructive' : ''}" data-a="${x.a}" ${x.extra || ''}>${x.label}</button>`).join('')}</div><button class="cancel" data-a="dialogCancel">${T('Cancelar')}</button></div>`;
 }
 
 /* ---------------- Render ---------------- */
 const phone = document.getElementById('phone');
-const SCREENS = { list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, pinMax: screenPinMax, specials: screenSpecials, share: screenShare, work: screenWork };
+const SCREENS = { language: screenLanguage, list: screenList, detail: s => screenDetail(s.id), special: s => screenSpecial(s.id), suggest: s => screenSuggest(s.id), widgets: screenWidgets, settings: screenSettings, reminders: screenReminders, appearance: screenAppearance, pinMax: screenPinMax, specials: screenSpecials, share: screenShare, work: screenWork };
 const TABS = [['list', 'Unforgettables', 'heart'], ['widgets', 'Widgets', 'widgets'], ['settings', 'Ajustes', 'gear']];
 const statusbar = `<div class="statusbar"><span>9:41</span><span class="icons"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.1-1.2A10 10 0 008 .8 10 10 0 00.9 3.7L2 4.9a8.4 8.4 0 016-2.4zm0 3.4c1.4 0 2.6.5 3.6 1.4l1.1-1.2A7 7 0 008 4.2a7 7 0 00-4.7 1.9l1.1 1.2c1-.9 2.2-1.4 3.6-1.4zm0 3.3c.6 0 1.1.2 1.5.6L8 11.4 6.5 9.8c.4-.4.9-.6 1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2.5" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div>`;
 
@@ -984,7 +1016,7 @@ function render() {
   const act = document.activeElement; const focusId = act && act.id && phone.contains(act) ? act.id : null; const selStart = focusId && act.selectionStart != null ? act.selectionStart : null;
   const top = stack()[stack().length - 1];
   let html = statusbar + '<div class="island"></div>' + SCREENS[top.s](top);
-  html += `<nav class="tabbar">${TABS.map(([k, label, icon]) => `<button class="tab ${S.tab === k ? 'sel' : ''}" data-a="tab" data-v="${k}">${ic(icon, '', S.tab === k ? 2.1 : 1.7)}${label}</button>`).join('')}</nav>`;
+  html += `<nav class="tabbar">${TABS.map(([k, label, icon]) => `<button class="tab ${S.tab === k ? 'sel' : ''}" data-a="tab" data-v="${k}">${ic(icon, '', S.tab === k ? 2.1 : 1.7)}${T(label)}</button>`).join('')}</nav>`;
   for (const o of S.overlays) html += OVERLAYS[o.s](o);
   if (S.dialog) html += dialogHtml(S.dialog);
   if (S.toast) html += `<div class="toast ${S.toast.fresh ? 'anim' : ''}"><span>${S.toast.emoji}</span>${esc(S.toast.msg)}</div>`;
@@ -1036,7 +1068,7 @@ const A = {
   bulkAdd() { S.overlays.pop(); present({ s: 'import', sel: new Set() }); },
   impNext() { const o = topOverlay(); o.rows = AGENDA.filter(c => o.sel.has(c.id)).map(c => ({ id: c.id, name: c.name, m: c.m || null, d: c.d || null, y: c.y || null, photo: !!c.photo })); render(); },
   impBack() { delete topOverlay().rows; render(); },
-  impAdd() { const o = topOverlay(); let n = 0; for (const r of o.rows) { if (S.people.some(p => p.name === r.name.trim())) continue; S.people.push({ id: 'imp-' + r.id, name: r.name.trim(), m: r.m, d: r.d, y: r.y, gustos: [], gifts: [], ideas: [], notes: '', work: false, tz: null, remind: null, photo: r.photo }); n++; } S.overlays.pop(); persist(); toast(`Agregaste ${n} cumpleaños`, '🎉'); },
+  impAdd() { const o = topOverlay(); let n = 0; for (const r of o.rows) { if (S.people.some(p => p.name === r.name.trim())) continue; S.people.push({ id: 'imp-' + r.id, name: r.name.trim(), m: r.m, d: r.d, y: r.y, gustos: [], gifts: [], ideas: [], notes: '', work: false, tz: null, remind: null, photo: r.photo }); n++; } S.overlays.pop(); persist(); toast(TP(n, 'Agregaste {n} cumpleaños', 'Agregaste {n} cumpleaños'), '🎉'); },
   edYear() { const dr = topOverlay().draft; dr.includeYear = !dr.includeYear; render(); },
   edWork() { const dr = topOverlay().draft; dr.work = !dr.work; render(); },
   findContact() { present({ s: 'findContact', q: '' }); },
@@ -1050,9 +1082,9 @@ const A = {
     const data = { name: dr.name.trim(), m: dr.m, d: Math.min(dr.d, daysIn(dr.m)), y: dr.includeYear ? dr.y : null, work: dr.work, notes: dr.notes, photo: dr.photo };
     if (o.id) Object.assign(person(o.id), data);
     else S.people.push(Object.assign({ id: 'p' + Date.now(), gustos: [], gifts: [], ideas: [], tz: null, remind: null }, data));
-    S.overlays.pop(); persist(); toast(o.id ? 'Cambios guardados' : `${data.name} agregado`, '✅');
+    S.overlays.pop(); persist(); toast(o.id ? 'Cambios guardados' : T('{name} agregado', { name: data.name }), '✅');
   },
-  askDelete() { const o = topOverlay(); S.dialog = { type: 'confirm', title: `¿Eliminar a ${esc(o.draft.name || 'esta persona')}?`, actions: [{ label: 'Eliminar', a: 'doDelete', destructive: true }], fresh: true }; render(); },
+  askDelete() { const o = topOverlay(); S.dialog = { type: 'confirm', title: T('¿Eliminar a {name}?', { name: esc(o.draft.name || T('esta persona')) }), actions: [{ label: T('Eliminar'), a: 'doDelete', destructive: true }], fresh: true }; render(); },
   doDelete() { const o = topOverlay(); S.people = S.people.filter(p => p.id !== o.id); S.dialog = null; S.overlays.pop(); S.stacks.list = [{ s: 'list' }]; persist(); toast('Persona eliminada', '🗑️'); },
   dialogCancel() { S.dialog = null; render(); },
   toGifts() { const el = document.getElementById('regalos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
@@ -1064,7 +1096,7 @@ const A = {
     S.overlays.pop(); persist(); toast(o.s === 'gift' ? 'Regalo anotado' : 'Idea guardada', '🎁');
   },
   addGusto(d) { present({ s: 'gusto', id: d.id, text: '' }); },
-  gustoToggle(d) { const o = topOverlay(), p = person(o.id), i = p.gustos.indexOf(d.v); if (i >= 0) p.gustos.splice(i, 1); else { p.gustos.push(d.v); o.text = ''; } persist(); render(); },
+  gustoToggle(d) { const o = topOverlay(), p = person(o.id), i = p.gustos.findIndex(g => g === d.v || T(g) === d.v); if (i >= 0) p.gustos.splice(i, 1); else { p.gustos.push(d.v); o.text = ''; } persist(); render(); },
   remindPerson(d) { present({ s: 'remindPerson', id: d.id }); },
   pin(d) { if (needUnlock('pin')) return; const cur = S.pins.find(x => x.k === d.k && x.id === d.id); present({ s: 'pin', k: d.k, id: d.id, style: cur ? cur.style : 'days', design: cur && cur.design || null, color: cur && cur.color || 'classic', tone: cur && cur.tone || 'grad', photo: cur && cur.photo || null }); },
   pinStyle(d) { const o = topOverlay(); o.style = d.v; o.design = null; render(); },
@@ -1076,13 +1108,13 @@ const A = {
     S.pins = S.pins.filter(pinEv);
     // Llegó al máximo: preguntar cuál reemplazar en vez de sumar otra
     if (!cur && S.pins.length >= S.pinMax) {
-      S.dialog = { type: 'confirm', title: `<b>Llegaste al máximo de ${S.pinMax} fechas fijadas</b><br>¿Cuál querés reemplazar? Podés subir el máximo en Ajustes.`, actions: S.pins.map((x, i) => ({ label: `${esc(pinEv(x).name)} · ${pinStyleName(x.style)}`, a: 'pinReplace', extra: `data-i="${i}"` })), fresh: true };
+      S.dialog = { type: 'confirm', title: T('<b>Llegaste al máximo de {n} fechas fijadas</b><br>¿Cuál querés reemplazar? Podés subir el máximo en Ajustes.', { n: S.pinMax }), actions: S.pins.map((x, i) => ({ label: `${esc(pinEv(x).name)} · ${pinStyleName(x.style)}`, a: 'pinReplace', extra: `data-i="${i}"` })), fresh: true };
       return render();
     }
     if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
-  pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }; S.dialog = null; persist(); dismiss(); toast(`Reemplazaste a ${old}`); },
+  pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }; S.dialog = null; persist(); dismiss(); toast(T('Reemplazaste a {name}', { name: old })); },
   pinMax(d) { S.pinMax = +d.v; persist(); render(); },
-  pinUnpin(d) { const ev = pinEv(S.pins.find(x => x.k === d.k && x.id === d.id)); S.pins = S.pins.filter(x => !(x.k === d.k && x.id === d.id)); persist(); toast(`${ev ? ev.name : "La fecha"} ya no está en Widgets`, '🗑️'); },
+  pinUnpin(d) { const ev = pinEv(S.pins.find(x => x.k === d.k && x.id === d.id)); S.pins = S.pins.filter(x => !(x.k === d.k && x.id === d.id)); persist(); toast(T('{name} ya no está en Widgets', { name: ev ? ev.name : T('La fecha') }), '🗑️'); },
   pinRemove() { const o = topOverlay(); S.pins = S.pins.filter(x => !(x.k === o.k && x.id === o.id)); persist(); dismiss(); toast('Lo sacaste de Widgets', '🗑️'); },
   remPersonSet(d) { const o = topOverlay(); person(o.id).remind = d.v === 'null' ? null : +d.v; persist(); render(); },
   tzPerson(d) { if (needUnlock('tz')) return; present({ s: 'tz', id: d.id }); },
@@ -1092,6 +1124,7 @@ const A = {
   remBefore(d) { S.rem.before = +d.v; persist(); render(); },
   remRound(d) { S.rem.roundBefore = +d.v; persist(); render(); },
   theme(d) { S.theme = d.v; applyTheme(); persist(); render(); },
+  lang(d) { S.lang = LANG = d.v; document.documentElement.lang = d.v; persist(); render(); },
   workToggle(d) { S.work[d.k] = !S.work[d.k]; persist(); render(); },
   wOpen(d) { if (needUnlock('theme')) return; present(Object.assign({ s: 'wcfg', w: d.w }, wCfg(d.w))); },
   wDesign(d) { topOverlay().design = d.v; render(); },
@@ -1104,7 +1137,7 @@ const A = {
   photoAdjSave() { const o = S.overlays.pop(), parent = topOverlay(); parent.photo = o.photo; parent.color = 'photo'; render(); },
   wSave() { const o = topOverlay(); S.wcfg[o.w] = { design: o.design, color: o.color, tone: o.tone, photo: o.photo }; persist(); dismiss(); toast('Widget actualizado'); },
   addSpecial() { present({ s: 'addSpecial', draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); },
-  addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: d.n, kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Día especial', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
+  addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: T(d.n), kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Día especial', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
   specKind(d) { topOverlay().draft.kind = d.v; render(); },
   specSave() {
     const dr = topOverlay().draft; if (!dr.name.trim()) return;
@@ -1126,7 +1159,7 @@ const A = {
   onboarding() { present({ s: 'onboarding', step: 0 }); },
   obNext() { topOverlay().step++; render(); },
   obImport() { importContacts(CONTACTS.filter(c => !S.people.some(p => p.name === c.name)).map(c => c.id)); persist(); topOverlay().step++; render(); },
-  obNotif() { S.dialog = { type: 'alert', title: '“Unforgettables” quiere enviarte notificaciones', msg: 'Pueden incluir alertas, sonidos e insignias en los íconos.', buttons: [{ label: 'No permitir', a: 'obNotifNo' }, { label: 'Permitir', a: 'obNotifYes' }], fresh: true }; render(); },
+  obNotif() { S.dialog = { type: 'alert', title: T('“Unforgettables” quiere enviarte notificaciones'), msg: T('Pueden incluir alertas, sonidos e insignias en los íconos.'), buttons: [{ label: T('No permitir'), a: 'obNotifNo' }, { label: T('Permitir'), a: 'obNotifYes' }], fresh: true }; render(); },
   obNotifYes() { S.dialog = null; S.rem.on = true; topOverlay().step++; render(); },
   obNotifNo() { S.dialog = null; S.rem.on = false; topOverlay().step++; render(); },
   obDone() { S.overlays.pop(); S.tab = 'list'; S.stacks.list = [{ s: 'list' }]; localStorage.setItem(LS + '-ob', '1'); persist(); if (!S.unlocked) present({ s: 'paywall', soft: true }); else render(); },
@@ -1209,6 +1242,7 @@ phone.addEventListener('scroll', e => {
 }, true);
 
 applyTheme();
+document.documentElement.lang = S.lang;
 // Abrir directo una pantalla: ?pantalla=onboarding | paywall
 const q = new URLSearchParams(location.search).get('pantalla');
 render();

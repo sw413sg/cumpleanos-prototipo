@@ -1139,8 +1139,25 @@ function importContacts(ids) {
 
 phone.addEventListener('click', e => {
   const el = e.target.closest('[data-a]'); if (!el || el.disabled || !phone.contains(el)) return;
-  e.preventDefault(); const fn = A[el.dataset.a]; if (fn) fn(el.dataset, el);
+  e.preventDefault(); const from = lensFrom(el), fn = A[el.dataset.a]; if (fn) fn(el.dataset, el);
+  if (from) lensSlide(from);
 });
+// Lente de vidrio de los selectores: al cambiar de opción se desliza, se agranda y se estira, y vuelve con rebote (como iOS 26)
+const SEGS = '.segmented, .pin-tabs';
+const box = (b, c) => { const r = b.getBoundingClientRect(), p = c.getBoundingClientRect(), z = r.width / b.offsetWidth || 1; return { x: (r.left - p.left) / z, y: (r.top - p.top) / z, w: b.offsetWidth, h: b.offsetHeight }; };
+function lensFrom(el) {
+  const seg = el.closest(SEGS), old = seg && seg.querySelector(':scope > .sel');
+  if (!old || old === el || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  return { i: [...phone.querySelectorAll(SEGS)].indexOf(seg), to: [...seg.children].indexOf(el), r: box(old, seg) };
+}
+function lensSlide({ i, to, r }) {
+  const seg = phone.querySelectorAll(SEGS)[i], sel = seg && seg.children[to]; if (!sel || !sel.classList.contains('sel')) return;
+  const n = box(sel, seg), lens = document.createElement('i'); lens.className = 'glass-lens';
+  seg.prepend(lens); seg.classList.add('lens-moving');
+  const at = (x, w, sx, sy) => ({ left: x + 'px', top: n.y + 'px', width: w + 'px', height: n.h + 'px', transform: `scale(${sx}, ${sy})` });
+  lens.animate([at(r.x, r.w, 1, 1), { ...at(r.x + (n.x - r.x) * .15, r.w, 1.12, 1.18), offset: .18 }, { ...at((r.x + n.x) / 2 - 8, (r.w + n.w) / 2 + 16, 1.1, 1.08), offset: .55 }, at(n.x, n.w, 1, 1)],
+    { duration: 480, easing: 'cubic-bezier(.3,1.15,.45,1)' }).onfinish = () => { lens.remove(); seg.classList.remove('lens-moving'); };
+}
 phone.addEventListener('input', e => {
   const t = e.target, o = topOverlay();
   if (t.id === 'search') { S.search = t.value; render(); return; }

@@ -546,8 +546,7 @@ function widgetCal(c) {
 const W_RENDER = { next: widgetNext, list: widgetList, cal: widgetCal };
 function sheetWidget(o) {
   const c = wCfg(o.w, o), [title] = W_KINDS[o.w];
-  const designs = `<div class="wk-color pin-color"><div class="wk-colhead"><span>Diseño</span></div><div class="pin-designs">${W_KINDS[o.w][2].map(([k, t]) => `<button class="${c.design === k ? 'sel' : ''}" data-a="wDesign" data-v="${k}">${t}</button>`).join('')}</div></div>`;
-  const h = `<div class="pin-prev"><div class="wk-stage">${W_RENDER[o.w](c)}</div></div>${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(c.color, c.tone, 'wColor', 'Automático', null, o.photo)}</div>` +
+  const h = `${designCarousel(W_KINDS[o.w][2], c.design, k => W_RENDER[o.w]({ ...c, design: k }), 'wDesign')}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(c.color, c.tone, 'wColor', 'Automático', null, o.photo)}</div>` +
     `<div class="section-footer" style="margin:-20px 16px 24px">Para verlo en tu inicio, agregá el widget <b>${title}</b> de Unforgettables.</div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title, right: `<button class="navbtn bold" data-a="wSave">Listo</button>` }) + `<div class="scroll">${h}</div>`);
 }
@@ -657,10 +656,14 @@ function sheetPin(o) {
 // Estilo arriba (pestañas) y diseño deslizando el widget, como al personalizar la pantalla bloqueada (SwiftUI: TabView .page)
 const STYLE_SHORT = { days: 'Días', secs: 'Segundos', weeks: 'Semanas', bar: 'Barra' };
 function pinPicker(o, pin) {
-  const ds = PIN_DESIGNS[o.style], cur = Math.max(0, ds.findIndex(d => d[0] === pinDesign(pin)));
   return `<div class="pin-tabs">${PIN_STYLES.map(([k, , , icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}">${ic(icon, '', 2)}<span>${STYLE_SHORT[k]}</span></button>`).join('')}</div>` +
-    `<div class="pin-car" data-i="${cur}">${ds.map(([k]) => `<div class="pin-slide"><div class="wk-stage">${pinWidget({ ...pin, design: k })}</div></div>`).join('')}</div>` +
-    `<div class="pin-carlab"><b>${ds[cur][1]}</b><span class="pin-dots">${ds.map(([k], i) => `<button class="${i === cur ? 'on' : ''}" data-a="pinDesign" data-v="${k}" aria-label="${ds[i][1]}"></button>`).join('')}</span><span class="s">Deslizá para ver otro diseño</span></div>`;
+    designCarousel(PIN_DESIGNS[o.style], pinDesign(pin), k => pinWidget({ ...pin, design: k }), 'pinDesign');
+}
+// Carrusel de diseños: se desliza el widget y los puntos marcan cuál es (fechas fijadas y widgets de la pestaña Widgets)
+function designCarousel(ds, design, draw, a) {
+  const cur = Math.max(0, ds.findIndex(d => d[0] === design));
+  return `<div class="pin-car" data-i="${cur}" data-keys="${ds.map(d => d[0]).join(',')}">${ds.map(([k]) => `<div class="pin-slide"><div class="wk-stage">${draw(k)}</div></div>`).join('')}</div>` +
+    `<div class="pin-carlab"><b>${ds[cur][1]}</b><span class="pin-dots">${ds.map(([k, t], i) => `<button class="${i === cur ? 'on' : ''}" data-a="${a}" data-v="${k}" aria-label="${t}"></button>`).join('')}</span><span class="s">Deslizá para ver otro diseño</span></div>`;
 }
 // Ajustar la foto de fondo: se arrastra para elegir qué parte se ve, zoom y oscurecer (SwiftUI: PhotosPicker + DragGesture)
 function sheetPhotoAdj(o) {
@@ -1172,7 +1175,7 @@ let carT;
 phone.addEventListener('scroll', e => {
   const c = e.target; if (!c.classList || !c.classList.contains('pin-car')) return;
   clearTimeout(carT);
-  carT = setTimeout(() => { const o = topOverlay(), i = Math.round(c.scrollLeft / c.clientWidth); if (o && +c.dataset.i !== i) { o.design = PIN_DESIGNS[o.style][i][0]; render(); } }, 140);
+  carT = setTimeout(() => { const o = topOverlay(), i = Math.round(c.scrollLeft / c.clientWidth); if (o && +c.dataset.i !== i) { o.design = c.dataset.keys.split(',')[i]; render(); } }, 140);
 }, true);
 let wheelT;
 phone.addEventListener('scroll', e => {

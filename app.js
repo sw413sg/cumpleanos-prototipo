@@ -45,6 +45,10 @@ const P = {
   chev: '<path d="M9 5l7 7-7 7"/>',
   back: '<path d="M15 3.5L6.5 12 15 20.5"/>',
   plus: '<path d="M12 4.5v15M4.5 12h15"/>',
+  minus: '<path d="M4.5 12h15"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  crop: '<path d="M6.5 3v14.5H21M3 6.5h14.5V21"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5"/>',
   gift: '<rect x="3.5" y="8" width="17" height="4.5" rx="1"/><path d="M5 12.5v7.5h14v-7.5M12 8v12M12 8S10.5 3.5 8 4.2C6 4.8 7 8 12 8zm0 0s1.5-4.5 4-3.8C18 4.8 17 8 12 8z"/>',
   cake: '<path d="M4 20.5h16M5 20.5V13a2 2 0 012-2h10a2 2 0 012 2v7.5M5 15.5c1.5 1.3 3 1.3 4.5 0s3-1.3 4.5 0 3 1.3 5 0M12 11V7.5M12 5.5c-.9-.8-.9-1.9 0-3 .9 1.1.9 2.2 0 3z"/>',
   bell: '<path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15zM10 20.5a2 2 0 004 0"/>',
@@ -185,7 +189,7 @@ const S = {
   pushed: false,
 };
 function persist() {
-  localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, wcfg: S.wcfg, pins: S.pins, pinMax: S.pinMax, listView: S.listView }));
+  try { localStorage.setItem(LS, JSON.stringify({ unlocked: S.unlocked, theme: S.theme, people: S.people, specials: S.specials, rem: S.rem, work: S.work, widgetTheme: S.widgetTheme, widgetTone: S.widgetTone, wcfg: S.wcfg, pins: S.pins, pinMax: S.pinMax, listView: S.listView })); } catch { console.warn('No hay lugar para guardar'); }
 }
 const person = id => S.people.find(p => p.id === id);
 const gradFor = id => GRADS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
@@ -444,15 +448,23 @@ const themeOk = k => THEMES.some(t => t[0] === k);
 const tGrad = c => `linear-gradient(135deg,${c[0]},${c[1]} 55%,${c[2]})`;
 const swatchBg = (k, c) => c ? tGrad(c) : 'linear-gradient(135deg,#fff 50%,#1c1c1e 50%)';
 // Clase y estilo del widget para un color y un fondo (degradé o suave). "classic" no cambia nada.
-function tAttrs(k, tone) {
+function tAttrs(k, tone, photo) {
+  if (k === 'photo' && photo) return { cls: 't-color t-photo', style: '--wcol:#e23d4a;background:#2c2c2e', bg: photoLayer(photo) };
   const c = (THEMES.find(t => t[0] === k) || [])[2]; if (!c) return { cls: '', style: '' };
   if (tone === 'soft') return { cls: 't-soft', style: `--accent:${c[1]};--purple:${c[1]};background:color-mix(in srgb, ${c[1]} 13%, var(--cell))` };
   return { cls: 't-color', style: `--wcol:${c[1]};background:${tGrad(c)}` };
 }
+// Foto de fondo: queda solo en el teléfono (en el iPhone, en el App Group que comparten la app y los widgets).
+// x / y: qué parte se ve (en %), z: zoom, dim: cuánto se oscurece para que se lea el texto.
+const photoStyle = ph => `background-image:url(${ph.src});background-position:${ph.x}% ${ph.y}%;transform:scale(${ph.z});transform-origin:${ph.x}% ${ph.y}%`;
+const photoLayer = ph => `<div class="w-photo" style="${photoStyle(ph)}"></div><div class="w-photodim" style="background:rgba(0,0,0,${ph.dim})"></div>`;
 // Selector de color y de fondo (pestaña Widgets y hoja "Mostrar en un widget")
-function colorPicker(cur, tone, a, autoName = 'Automático', autoColor = null) {
-  return `<div class="wk-swatches">${THEMES.map(([k, name, c]) => `<button class="${cur === k ? 'sel' : ''}" data-a="${a}" data-v="${k}"><span style="background:${swatchBg(k, k === 'classic' ? autoColor : c)}"></span>${k === 'classic' ? autoName : name}</button>`).join('')}</div>` +
-    (cur === 'classic' && autoName === 'Automático' ? '' : `<div class="segmented wk-tone"><button class="${tone !== 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="grad">Degradé</button><button class="${tone === 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="soft">Suave</button></div>`);
+function colorPicker(cur, tone, a, autoName = 'Automático', autoColor = null, photo = null) {
+  const isPhoto = cur === 'photo' && photo;
+  const photoRow = `<div class="wk-photo ${isPhoto ? 'sel' : ''}"><button class="wk-photobtn" data-a="bgPhoto"><span class="thumb" ${photo ? `style="background-image:url(${photo.src})"` : ''}>${photo ? '' : ic('photo', '', 2)}</span><span class="grow"><b>Foto</b><span class="s">${isPhoto ? 'Es el fondo de este widget' : photo ? 'Tocá para usarla de fondo' : 'Elegí una foto de tu iPhone'}</span></span>${photo ? '' : chev()}</button>` +
+    (isPhoto ? `<div class="wk-photoacts"><button data-a="bgPhotoAdjust">${ic('crop', '', 2)}Ajustar</button><button data-a="bgPhotoNew">${ic('photo', '', 2)}Cambiar foto</button></div>` : '') + `</div>`;
+  return `<div class="wk-swatches">${THEMES.map(([k, name, c]) => `<button class="${cur === k ? 'sel' : ''}" data-a="${a}" data-v="${k}"><span style="background:${swatchBg(k, k === 'classic' ? autoColor : c)}"></span>${k === 'classic' ? autoName : name}</button>`).join('')}</div>` + photoRow +
+    (isPhoto || cur === 'classic' && autoName === 'Automático' ? '' : `<div class="segmented wk-tone"><button class="${tone !== 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="grad">Degradé</button><button class="${tone === 'soft' ? 'sel' : ''}" data-a="${a}Tone" data-v="soft">Suave</button></div>`);
 }
 // Lo que viene, cumpleaños y (con Unlock) fechas especiales, ordenado por días
 function upcoming(k, withSpecials = true) {
@@ -484,23 +496,23 @@ const W_KINDS = {
 // Sin elegir todavía: el primer diseño y el color que tenían antes los widgets
 function wCfg(w, o = S.wcfg[w] || {}) {
   const ds = W_KINDS[w][2];
-  return { design: ds.some(d => d[0] === o.design) ? o.design : ds[0][0], color: themeOk(o.color) ? o.color : themeOk(S.widgetTheme) ? S.widgetTheme : 'classic', tone: o.tone || S.widgetTone || 'grad' };
+  return { design: ds.some(d => d[0] === o.design) ? o.design : ds[0][0], color: o.color === 'photo' && o.photo ? 'photo' : themeOk(o.color) ? o.color : themeOk(S.widgetTheme) ? S.widgetTheme : 'classic', tone: o.tone || S.widgetTone || 'grad', photo: o.photo || null };
 }
 const wDesignName = (w, c) => W_KINDS[w][2].find(d => d[0] === c.design)[1];
 const wFirst = it => it.p ? esc(it.p.name.split(' ')[0]) : esc(it.sp.name);
 const wUnit = n => n === 0 ? '<b>Hoy</b>' : n === 1 ? '<b>Mañana</b>' : (([a, u]) => `<b>${a}</b><span>${u}</span>`)(countParts(n));
 function widgetNext(c) {
-  const t = tAttrs(c.color, c.tone), its = upcoming(3);
+  const t = tAttrs(c.color, c.tone, c.photo), its = upcoming(3);
   let body;
   if (c.design === 'cards') body = `${wBrand()}<div class="w-cards">${its.map(it => `<div>${wCircle(it)}<div class="w-cnum">${wUnit(it.n)}</div><div class="w-cname">${wFirst(it)}</div></div>`).join('')}</div>`;
   else if (c.design === 'first') { const [a, ...rest] = its; body = `<div class="w-first"><div class="w-firstbig">${wCircle(a)}<div class="w-count">${a.n === 0 ? '<span class="big">Hoy</span>' : (([x, u]) => `<span class="big">${x}</span><span class="u">${u}</span>`)(countParts(a.n))}</div><div class="w-name">${wName(a)}</div></div><div class="w-firstrest">${wBrand()}${rest.map(it => `<div><div class="w-rname">${wName(it)}</div><div class="w-sub">${wWhen(it.n).replace(/<\/?b>/g, '')}</div></div>`).join('')}</div></div>`; }
   else if (c.design === 'line') body = `${wBrand()}<div class="w-line">${its.map(it => `<div><div class="w-cnum">${wUnit(it.n)}</div><span class="dot ${it.p ? '' : 'sp'}"></span><div class="w-cname">${wFirst(it)}</div></div>`).join('')}</div>`;
   else body = `${wBrand()}${its.map(wRow).join('')}`;
-  return `<div class="widget md wd-${c.design} ${t.cls}" style="${t.style}">${body}</div>`;
+  return `<div class="widget md wd-${c.design} ${t.cls}" style="${t.style}">${t.bg || ''}${body}</div>`;
 }
 const MON3 = m => cap(MONTHS[m - 1].slice(0, 3));
 function widgetList(c) {
-  const t = tAttrs(c.color, c.tone);
+  const t = tAttrs(c.color, c.tone, c.photo);
   const head = (title = 'Próximos') => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
   let body;
   if (c.design === 'months') {
@@ -508,7 +520,7 @@ function widgetList(c) {
   } else if (c.design === 'compact') body = head() + upcoming(11).map(it => { const x = it.p || it.sp; return `<div class="w-crow"><span class="w-cdate">${x.d} ${MON3(x.m)}</span><span class="dot ${it.p ? '' : 'sp'}"></span><span class="grow">${wName(it)}</span><span class="w-when">${wWhen(it.n)}</span></div>`; }).join('');
   else if (c.design === 'grid') body = head() + `<div class="w-grid">${upcoming(6).map(it => `<div>${wCircle(it)}<div class="w-cnum">${wUnit(it.n)}</div><div class="w-cname">${wName(it)}</div></div>`).join('')}</div>`;
   else body = head() + upcoming(7).map(wRow).join('');
-  return `<div class="widget lg wd-${c.design} ${t.cls}" style="${t.style}">${body}</div>`;
+  return `<div class="widget lg wd-${c.design} ${t.cls}" style="${t.style}">${t.bg || ''}${body}</div>`;
 }
 // Qué hay ese día: 'cu' (cumple), 'sp' (fecha especial) o ''
 const calMark = (y, m, d) => S.people.some(p => { const [om, od] = observed(p.m, p.d, y); return om === m && od === d; }) ? 'cu' : S.specials.some(s => s.m === m && s.d === d) ? 'sp' : '';
@@ -519,7 +531,7 @@ function monthCells(y, m, cell) {
   return h;
 }
 function widgetCal(c) {
-  const t = tAttrs(c.color, c.tone), y = TODAY.getFullYear(), m = TODAY.getMonth() + 1;
+  const t = tAttrs(c.color, c.tone, c.photo), y = TODAY.getFullYear(), m = TODAY.getMonth() + 1;
   const wk = `${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<i>${x}</i>`).join('')}`;
   const head = title => `<div class="w-lghead"><span class="w-month">${title}</span>${wBrand()}</div>`;
   const num = (d, k, hoy) => `<span class="${k}${hoy ? ' hoy' : ''}">${d}</span>`;
@@ -529,13 +541,13 @@ function widgetCal(c) {
   else if (c.design === 'blocks') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-blocks">${wk}${monthCells(y, m, num)}</div>`;
   else if (c.design === 'month') body = head(cap(MONTHS[m - 1])) + `<div class="w-cal w-calbig">${wk}${monthCells(y, m, num)}</div>`;
   else body = head(cap(MONTHS[m - 1])) + `<div class="w-cal">${wk}${monthCells(y, m, num)}</div><div class="w-sep"></div>${upcoming(3).map(wRow).join('')}`;
-  return `<div class="widget lg w-calw wd-${c.design} ${t.cls}" style="${t.style}">${body}</div>`;
+  return `<div class="widget lg w-calw wd-${c.design} ${t.cls}" style="${t.style}">${t.bg || ''}${body}</div>`;
 }
 const W_RENDER = { next: widgetNext, list: widgetList, cal: widgetCal };
 function sheetWidget(o) {
   const c = wCfg(o.w, o), [title] = W_KINDS[o.w];
   const designs = `<div class="wk-color pin-color"><div class="wk-colhead"><span>Diseño</span></div><div class="pin-designs">${W_KINDS[o.w][2].map(([k, t]) => `<button class="${c.design === k ? 'sel' : ''}" data-a="wDesign" data-v="${k}">${t}</button>`).join('')}</div></div>`;
-  const h = `<div class="pin-prev"><div class="wk-stage">${W_RENDER[o.w](c)}</div></div>${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(c.color, c.tone, 'wColor')}</div>` +
+  const h = `<div class="pin-prev"><div class="wk-stage">${W_RENDER[o.w](c)}</div></div>${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(c.color, c.tone, 'wColor', 'Automático', null, o.photo)}</div>` +
     `<div class="section-footer" style="margin:-20px 16px 24px">Para verlo en tu inicio, agregá el widget <b>${title}</b> de Unforgettables.</div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title, right: `<button class="navbtn bold" data-a="wSave">Listo</button>` }) + `<div class="scroll">${h}</div>`);
 }
@@ -620,20 +632,54 @@ function pinWidget(pin) {
   }
   // Sin color elegido: rojo para cumples y violeta para fechas (en "Suave" también)
   const ck = pin.color && pin.color !== 'classic' ? pin.color : pin.tone === 'soft' ? (ev.p ? 'red' : 'purple') : null;
-  const col = ck ? tAttrs(ck, pin.tone) : null;
-  return `<div class="widget ${size} w-pin d-${dz} ${ev.p ? 'w-party' : 'w-special'} ${col ? col.cls : ''}" style="${col ? col.style : ''}">${deco}${extra}${body}</div>`;
+  const col = ck ? tAttrs(ck, pin.tone, pin.photo) : null;
+  return `<div class="widget ${size} w-pin d-${dz} ${ev.p ? 'w-party' : 'w-special'} ${col ? col.cls : ''}" style="${col ? col.style : ''}">${col && col.bg || ''}${deco}${extra}${body}</div>`;
 }
 function sheetPin(o) {
   const pinned = S.pins.some(x => x.k === o.k && x.id === o.id);
-  const pin = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone };
+  const pin = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo };
   const ev = pinEv(pin);
   const styles = `<div class="pin-styles">${PIN_STYLES.map(([k, t, s, icon]) => `<button class="${o.style === k ? 'sel' : ''}" data-a="pinStyle" data-v="${k}"><span class="kp-ic">${ic(icon, '', 2)}</span><span><b>${t}</b><span class="s">${s}</span></span></button>`).join('')}</div>`;
   const designs = `<div class="wk-color pin-color"><div class="wk-colhead"><span>Diseño</span></div><div class="pin-designs">${PIN_DESIGNS[o.style].map(([k, t]) => `<button class="${pinDesign(pin) === k ? 'sel' : ''}" data-a="pinDesign" data-v="${k}">${t}</button>`).join('')}</div></div>`;
-  const h = `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>${styles}${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2])}</div>` +
+  const h = `<div class="pin-prev"><div class="wk-stage">${pinWidget(pin)}</div></div>${styles}${designs}<div class="wk-color pin-color"><div class="wk-colhead"><span>Color</span></div>${colorPicker(o.color || 'classic', o.tone, 'pinColor', 'Original', THEMES.find(t => t[0] === (ev.p ? 'red' : 'purple'))[2], o.photo)}</div>` +
     (pinned ? section(`<button class="row destructive" data-a="pinRemove">Quitar de Widgets</button>`) : '') +
     `<div class="section-footer" style="margin:-20px 16px 24px">Queda en la pestaña Widgets. Para verlo en tu inicio, agregá el widget <b>Fecha fijada</b> de Unforgettables y elegí ${esc(ev.p ? ev.name.split(' ')[0] : ev.name)}.</div>`;
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Mostrar en un widget', right: `<button class="navbtn bold" data-a="pinSave">${pinned ? 'Listo' : 'Agregar'}</button>` }) + `<div class="scroll">${h}</div>`);
 }
+// Ajustar la foto de fondo: se arrastra para elegir qué parte se ve, zoom y oscurecer (SwiftUI: PhotosPicker + DragGesture)
+function sheetPhotoAdj(o) {
+  const parent = S.overlays[S.overlays.indexOf(o) - 1], ph = o.photo;
+  const prev = parent.s === 'pin' ? pinWidget({ k: parent.k, id: parent.id, style: parent.style, design: parent.design, tone: parent.tone, color: 'photo', photo: ph })
+    : W_RENDER[parent.w]({ design: parent.design, tone: parent.tone, color: 'photo', photo: ph });
+  const slider = (id, label, min, max, v, icL, icR) => `<div class="adj-row"><span class="adj-lab">${label}</span><span class="adj-ic">${ic(icL, '', 2)}</span><input type="range" id="${id}" min="${min}" max="${max}" step="0.01" value="${v}"><span class="adj-ic">${ic(icR, '', 2)}</span></div>`;
+  const h = `<div class="pin-prev"><div class="wk-stage" id="photoStage">${prev}<div class="adj-hint">${ic('move', '', 2)}Arrastrá para mover</div></div></div>` +
+    `<div class="wk-color pin-color adj">${slider('adjZ', 'Zoom', 1, 3, ph.z, 'minus', 'plus')}${slider('adjDim', 'Oscurecer', 0, 0.6, ph.dim, 'sun', 'moon')}</div>` +
+    section(`<button class="row has-icon" data-a="bgPhotoNew"><span class="icon-sq" style="background:linear-gradient(#ffd25e,#ff9f0a)">${ic('photo', '', 2)}</span><span class="grow">Elegir otra foto</span>${chev()}</button><button class="row" data-a="photoAdjReset"><span class="grow" style="color:var(--accent)">Volver a centrar</span></button>`,
+      { footer: 'La foto queda guardada solo en tu iPhone. No se sube a ningún lado.' });
+  return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: 'Ajustar foto', right: `<button class="navbtn bold" data-a="photoAdjSave">Listo</button>` }) + `<div class="scroll">${h}</div>`);
+}
+// Mueve la foto en la vista previa sin volver a dibujar todo (para que el arrastre y los sliders vayan fluidos)
+function applyPhotoAdj(ph) {
+  const st = document.getElementById('photoStage'); if (!st) return;
+  const img = st.querySelector('.w-photo'), dim = st.querySelector('.w-photodim');
+  if (img) img.setAttribute('style', photoStyle(ph)); if (dim) dim.style.background = `rgba(0,0,0,${ph.dim})`;
+}
+// Elegir una foto del teléfono: se achica acá mismo (canvas) y se guarda local, sin subirla
+const bgFile = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
+document.body.appendChild(bgFile);
+bgFile.addEventListener('change', () => {
+  const f = bgFile.files[0]; bgFile.value = ''; if (!f) return;
+  const url = URL.createObjectURL(f), img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, 900 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+    const ph = { src: cv.toDataURL('image/jpeg', .82), x: 50, y: 50, z: 1, dim: .2 }, o = topOverlay();
+    if (o && o.s === 'photoAdj') { o.photo = ph; render(); } else present({ s: 'photoAdj', photo: ph });
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('No se pudo abrir esa foto', '⚠️'); };
+  img.src = url;
+});
 // Pantalla de bloqueo: en línea, circular y rectangular (monocromo, como en iOS)
 function lockScreen() {
   const [a, b] = upcoming(2, false);
@@ -894,7 +940,7 @@ function coverOnboarding(o) {
   return `<div class="full-cover ${o.fresh ? 'anim' : ''}"><div class="ob"><div class="art">${art}</div><h1>${title}</h1><p>${text}</p>${dots}<div class="stack">${btns}</div></div></div>`;
 }
 
-const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, pin: sheetPin, wcfg: sheetWidget, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, onboarding: coverOnboarding };
+const OVERLAYS = { editor: sheetEditor, import: sheetImport, findContact: sheetFindContact, gift: sheetGift, idea: sheetGift, gusto: sheetGusto, remindPerson: sheetRemindPerson, pin: sheetPin, wcfg: sheetWidget, photoAdj: sheetPhotoAdj, tz: sheetTz, addSpecial: sheetAddSpecial, paywall: sheetPaywall, store: sheetStore, onboarding: coverOnboarding };
 
 function dialogHtml(d) {
   if (d.type === 'alert') return `<div class="alert-wrap"><div class="alert ${d.fresh ? 'anim' : ''}"><div class="body"><div class="t">${d.title}</div><div class="m">${d.msg}</div></div><div class="btns">${d.buttons.map(b => `<button data-a="${b.a}">${b.label}</button>`).join('')}</div></div></div>`;
@@ -1000,7 +1046,7 @@ const A = {
   addGusto(d) { present({ s: 'gusto', id: d.id, text: '' }); },
   gustoToggle(d) { const o = topOverlay(), p = person(o.id), i = p.gustos.indexOf(d.v); if (i >= 0) p.gustos.splice(i, 1); else { p.gustos.push(d.v); o.text = ''; } persist(); render(); },
   remindPerson(d) { present({ s: 'remindPerson', id: d.id }); },
-  pin(d) { if (needUnlock('pin')) return; const cur = S.pins.find(x => x.k === d.k && x.id === d.id); present({ s: 'pin', k: d.k, id: d.id, style: cur ? cur.style : 'days', design: cur && cur.design || null, color: cur && cur.color || 'classic', tone: cur && cur.tone || 'grad' }); },
+  pin(d) { if (needUnlock('pin')) return; const cur = S.pins.find(x => x.k === d.k && x.id === d.id); present({ s: 'pin', k: d.k, id: d.id, style: cur ? cur.style : 'days', design: cur && cur.design || null, color: cur && cur.color || 'classic', tone: cur && cur.tone || 'grad', photo: cur && cur.photo || null }); },
   pinStyle(d) { const o = topOverlay(); o.style = d.v; o.design = null; render(); },
   pinDesign(d) { topOverlay().design = d.v; render(); },
   pinColor(d) { topOverlay().color = d.v; render(); },
@@ -1013,8 +1059,8 @@ const A = {
       S.dialog = { type: 'confirm', title: `<b>Llegaste al máximo de ${S.pinMax} fechas fijadas</b><br>¿Cuál querés reemplazar? Podés subir el máximo en Ajustes.`, actions: S.pins.map((x, i) => ({ label: `${esc(pinEv(x).name)} · ${pinStyleName(x.style)}`, a: 'pinReplace', extra: `data-i="${i}"` })), fresh: true };
       return render();
     }
-    if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
-  pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone }; S.dialog = null; persist(); dismiss(); toast(`Reemplazaste a ${old}`); },
+    if (cur) Object.assign(cur, { style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }); else S.pins.push({ k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }); persist(); dismiss(); toast(cur ? 'Widget actualizado' : 'Listo, está en Widgets'); },
+  pinReplace(d) { const o = topOverlay(), old = pinEv(S.pins[d.i]).name; S.pins[d.i] = { k: o.k, id: o.id, style: o.style, design: o.design, color: o.color, tone: o.tone, photo: o.photo }; S.dialog = null; persist(); dismiss(); toast(`Reemplazaste a ${old}`); },
   pinMax(d) { S.pinMax = +d.v; persist(); render(); },
   pinUnpin(d) { const ev = pinEv(S.pins.find(x => x.k === d.k && x.id === d.id)); S.pins = S.pins.filter(x => !(x.k === d.k && x.id === d.id)); persist(); toast(`${ev ? ev.name : "La fecha"} ya no está en Widgets`, '🗑️'); },
   pinRemove() { const o = topOverlay(); S.pins = S.pins.filter(x => !(x.k === o.k && x.id === o.id)); persist(); dismiss(); toast('Lo sacaste de Widgets', '🗑️'); },
@@ -1031,7 +1077,12 @@ const A = {
   wDesign(d) { topOverlay().design = d.v; render(); },
   wColor(d) { topOverlay().color = d.v; render(); },
   wColorTone(d) { topOverlay().tone = d.v; render(); },
-  wSave() { const o = topOverlay(); S.wcfg[o.w] = { design: o.design, color: o.color, tone: o.tone }; persist(); dismiss(); toast('Widget actualizado'); },
+  bgPhoto() { const o = topOverlay(); if (o.photo) { o.color = 'photo'; render(); } else bgFile.click(); },
+  bgPhotoNew() { bgFile.click(); },
+  bgPhotoAdjust() { present({ s: 'photoAdj', photo: Object.assign({}, topOverlay().photo) }); },
+  photoAdjReset() { Object.assign(topOverlay().photo, { x: 50, y: 50, z: 1 }); render(); },
+  photoAdjSave() { const o = S.overlays.pop(), parent = topOverlay(); parent.photo = o.photo; parent.color = 'photo'; render(); },
+  wSave() { const o = topOverlay(); S.wcfg[o.w] = { design: o.design, color: o.color, tone: o.tone, photo: o.photo }; persist(); dismiss(); toast('Widget actualizado'); },
   addSpecial() { present({ s: 'addSpecial', draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); },
   addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: d.n, kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Día especial', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
   specKind(d) { topOverlay().draft.kind = d.v; render(); },
@@ -1079,6 +1130,7 @@ phone.addEventListener('input', e => {
   if (t.id === 'giftWhat') { o.draft.what = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); document.getElementById('giftWarn').innerHTML = giftWarning(person(o.id), t.value); return; }
   if (t.id === 'gustoText') { o.text = t.value; document.getElementById('gustoList').innerHTML = gustoChips(o); return; }
   if (t.classList.contains('bulk-name')) { o.rows.find(r => r.id === t.dataset.id).name = t.value; document.getElementById('saveBtn').disabled = !o.rows.every(rowOk); return; }
+  if (t.id === 'adjZ' || t.id === 'adjDim') { o.photo[t.id === 'adjZ' ? 'z' : 'dim'] = +t.value; applyPhotoAdj(o.photo); return; }
   if (t.id === 'specName') { o.draft.name = t.value; document.getElementById('saveBtn').disabled = !t.value.trim(); return; }
 });
 phone.addEventListener('change', e => {
@@ -1087,6 +1139,18 @@ phone.addEventListener('change', e => {
   if (t.dataset.bulk) { const r = o.rows.find(x => x.id === t.dataset.id); r[t.dataset.bulk] = t.value ? +t.value : null; if (r.d && r.m) r.d = Math.min(r.d, daysIn(r.m, r.y)); render(); }
   if (t.id === 'remTime') { S.rem.time = t.value || '09:00'; persist(); render(); }
 });
+// Arrastrar la foto en "Ajustar foto"
+let drag = null;
+phone.addEventListener('pointerdown', e => {
+  const w = e.target.closest('#photoStage .widget'); if (!w) return;
+  const ph = topOverlay().photo, r = w.getBoundingClientRect();
+  e.preventDefault(); drag = { x: e.clientX, y: e.clientY, px: ph.x, py: ph.y, w: r.width, h: r.height }; w.setPointerCapture(e.pointerId);
+});
+phone.addEventListener('pointermove', e => {
+  if (!drag) return; const ph = topOverlay().photo, k = 150 / ph.z, cl = v => Math.max(0, Math.min(100, v));
+  ph.x = cl(drag.px - (e.clientX - drag.x) / drag.w * k); ph.y = cl(drag.py - (e.clientY - drag.y) / drag.h * k); applyPhotoAdj(ph);
+});
+['pointerup', 'pointercancel'].forEach(t => phone.addEventListener(t, () => { drag = null; }));
 let wheelT;
 phone.addEventListener('scroll', e => {
   const w = e.target; if (!w.classList || !w.classList.contains('wheel')) return;

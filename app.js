@@ -122,10 +122,10 @@ function demoPeople() {
 function demoSpecials() {
   const dm = diaDeLaMadre();
   return [
-    { id: 'madre', name: 'Día de la Madre', m: dm[0], d: dm[1], kind: 'Fecha del año', emoji: '💐' },
+    { id: 'madre', name: 'Día de la Madre', m: dm[0], d: dm[1], kind: 'Día especial', emoji: '💐' },
     { id: 'aniv', name: 'Aniversario con Caro', m: rel(52)[0], d: rel(52)[1], y: THIS_YEAR - 4, kind: 'Aniversario', emoji: '💞' },
     { id: 'casa', name: 'Casamiento de Sofi y Nico', m: rel(30)[0], d: rel(30)[1], kind: 'Casamiento', emoji: '💍' },
-    { id: 'amigo', name: 'Día del Amigo', m: 7, d: 20, kind: 'Fecha del año', emoji: '🤝' },
+    { id: 'amigo', name: 'Día del Amigo', m: 7, d: 20, kind: 'Día especial', emoji: '🤝' },
   ];
 }
 const CONTACTS = [
@@ -169,7 +169,8 @@ const S = {
   unlocked: !!saved.unlocked,
   theme: saved.theme || 'system',
   people: saved.people || demoPeople(),
-  specials: saved.specials || demoSpecials(),
+  // "Fecha del año" y "Otra" ahora son "Día especial"
+  specials: (saved.specials || demoSpecials()).map(x => x.kind === 'Fecha del año' || x.kind === 'Otra' ? { ...x, kind: 'Día especial' } : x),
   rem: saved.rem || { on: true, time: '09:00', before: 3, sameDay: true, round: true, roundBefore: 30, localTz: false },
   work: saved.work || { on: true, section: true },
   widgetTheme: saved.widgetTheme || 'classic', widgetTone: saved.widgetTone || 'grad',
@@ -236,7 +237,7 @@ function cakeIcon(p) {
 }
 // Ícono de cada fecha según qué día es (Día del Amigo: personas, Día de la Madre: corazón…); si no se reconoce, el del tipo
 const SP_ICON = [[/madre/i, 'heart'], [/padre/i, 'tie'], [/amig/i, 'people'], [/infancia|niñ/i, 'balloon'], [/gradua|recib/i, 'gradCap'], [/casamiento|boda/i, 'ring'], [/aniversario|novi/i, 'heart']];
-const KIND_ICON = { Aniversario: 'heart', Casamiento: 'ring', 'Fecha del año': 'calendar', Otra: 'star' };
+const KIND_ICON = { Aniversario: 'heart', Casamiento: 'ring', 'Día especial': 'star' };
 const spIc = sp => (SP_ICON.find(([re]) => re.test(sp.name)) || [])[1] || KIND_ICON[sp.kind] || 'heart';
 const SP_GRAD = 'linear-gradient(160deg,#d6a4ff,#9b51e0)';
 const spIcon = (sp, cls = '') => `<div class="avatar glyph ${cls}" style="background:${SP_GRAD}">${ic(spIc(sp), '', 2)}</div>`;
@@ -847,7 +848,7 @@ const kindBtn = (k, cur, label, icon, deco) => `<button class="kp ${k}${cur === 
 const addKindSwitch = cur => `<div class="kind-pick">${kindBtn('cumple', cur, 'Cumpleaños', 'cake', 'confetti')}${kindBtn('fecha', cur, 'Fecha', 'heart', 'hearts')}</div>`;
 function sheetAddSpecial(o) {
   const dr = o.draft;
-  const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Fecha del año', '📅'], ['Otra', '⭐️']];
+  const kinds = [['Aniversario', '💞'], ['Casamiento', '💍'], ['Día especial', '⭐️']];
   return sheetWrap(o, navbar({ left: `<button class="navbtn" data-a="dismiss">Cancelar</button>`, title: dr.id ? 'Editar fecha' : o.fromPlus ? '' : 'Nueva fecha', right: `<button class="navbtn bold" id="saveBtn" data-a="specSave" ${dr.name.trim() ? '' : 'disabled'}>Guardar</button>` }) +
     `<div class="scroll">${o.fromPlus ? addKindSwitch('fecha') : ''}${section(`<div class="row"><input class="field" id="specName" placeholder="Ej: Aniversario con Caro" value="${esc(dr.name)}" autocomplete="off"></div>`, { header: 'Nombre' })}<div class="segmented">${kinds.map(([k]) => `<button class="${dr.kind === k ? 'sel' : ''}" data-a="specKind" data-v="${k}">${k}</button>`).join('')}</div>${section(wheels(dr, false), { header: 'Fecha' })}</div>`);
 }
@@ -1032,11 +1033,11 @@ const A = {
   wColorTone(d) { topOverlay().tone = d.v; render(); },
   wSave() { const o = topOverlay(); S.wcfg[o.w] = { design: o.design, color: o.color, tone: o.tone }; persist(); dismiss(); toast('Widget actualizado'); },
   addSpecial() { present({ s: 'addSpecial', draft: { name: '', kind: 'Aniversario', m: TODAY.getMonth() + 1, d: TODAY.getDate() } }); },
-  addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: d.n, kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Fecha del año', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
+  addSpecialQuick(d) { present({ s: 'addSpecial', draft: { name: d.n, kind: d.n === 'Casamiento' ? 'Casamiento' : d.n === 'Aniversario' || d.n === 'Graduación' ? 'Aniversario' : 'Día especial', m: TODAY.getMonth() + 1, d: TODAY.getDate(), emoji: d.e } }); },
   specKind(d) { topOverlay().draft.kind = d.v; render(); },
   specSave() {
     const dr = topOverlay().draft; if (!dr.name.trim()) return;
-    const emoji = { Aniversario: '💞', Casamiento: '💍', Otra: '⭐️' }[dr.kind] || '📅';
+    const emoji = { Aniversario: '💞', Casamiento: '💍' }[dr.kind] || '⭐️';
     const data = { name: dr.name.trim(), m: dr.m, d: Math.min(dr.d, daysIn(dr.m)), kind: dr.kind };
     const sp = dr.id && S.specials.find(x => x.id === dr.id);
     if (sp) Object.assign(sp, data, sp.kind === dr.kind ? {} : { emoji });

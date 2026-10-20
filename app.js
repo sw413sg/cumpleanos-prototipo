@@ -762,7 +762,7 @@ function screenWidgets() {
     h += steps(['Con el iPhone bloqueado, mantené apretada la pantalla y tocá <b>Personalizar</b>.', 'Elegí <b>Pantalla bloqueada</b> y tocá el espacio de widgets debajo de la hora.', 'Buscá <b>Unforgettables</b> y elegí el formato.']);
     h += `</div>`;
   }
-  return `<div class="screen" data-key="widgets">${navbar({})}<div class="scroll" data-key="widgets-scroll"><div class="large-title">Widgets</div>${h}</div></div>`;
+  return `<div class="screen" data-key="widgets">${navbar({ left: '<div class="nav-title">Widgets</div>' })}<div class="scroll" data-key="widgets-scroll"><div class="large-title app-title">Widgets</div>${h}</div></div>`;
 }
 
 /* ---------------- Pantallas: Ajustes ---------------- */
@@ -780,7 +780,7 @@ function screenSettings() {
   h += section(`<button class="row accent" data-a="restore">${T('Restaurar compra')}</button>`, { footer: T('Si ya pagaste en otro iPhone con el mismo Apple ID, tocá Restaurar.') });
   h += section(`<button class="row accent" data-a="refresh">${T('Actualizar prototipo')}</button><button class="row accent" data-a="${S.unlocked ? 'relock' : 'unlockNow'}">${T(S.unlocked ? 'Volver a bloquear (solo prototipo)' : 'Desbloquear sin pagar (solo prototipo)')}</button><button class="row destructive" data-a="resetDemo">${T('Restablecer datos de ejemplo')}</button>`, { header: T('Prototipo'), footer: T('Estas opciones existen solo en el prototipo para revisar el diseño.') });
   h += `<div class="section-footer" style="text-align:center;padding-bottom:30px">Unforgettables · ${T('prototipo de diseño')}</div>`;
-  return `<div class="screen" data-key="settings">${navbar({})}<div class="scroll" data-key="settings-scroll"><div class="large-title">${T('Ajustes')}</div>${h}</div></div>`;
+  return `<div class="screen" data-key="settings">${navbar({ left: `<div class="nav-title">${T('Ajustes')}</div>` })}<div class="scroll" data-key="settings-scroll"><div class="large-title app-title">${T('Ajustes')}</div>${h}</div></div>`;
 }
 function checkList(opts, cur, a) {
   return opts.map(([v, label, sub]) => `<button class="row ${String(cur) === String(v) ? 'checked' : ''}" data-a="${a}" data-v="${v}"><span class="grow">${label}${sub ? `<div class="sub">${sub}</div>` : ''}</span>${String(cur) === String(v) ? ic('check', 'check', 2.6) : ''}</button>`).join('');
@@ -1023,7 +1023,7 @@ function render() {
   html += '<div class="home-ind"></div>';
   phone.innerHTML = html;
   phone.querySelectorAll('.scroll[data-key]').forEach(el => { if (scrolls[el.dataset.key] != null) el.scrollTop = scrolls[el.dataset.key]; });
-  phone.querySelectorAll('.scroll[data-key="list-scroll"]').forEach(syncNavTitle);
+  phone.querySelectorAll('.scroll[data-key]').forEach(syncNavTitle);
   phone.querySelectorAll('.wheel').forEach(w => { w.scrollTop = (+w.dataset.index) * 36; });
   phone.querySelectorAll('.pin-car').forEach(c => { c.scrollLeft = (+c.dataset.i) * c.clientWidth; });
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus({ preventScroll: true }); if (selStart != null && el.setSelectionRange) try { el.setSelectionRange(selStart, selStart); } catch { } } }
@@ -1227,7 +1227,7 @@ function syncNavTitle(sc) {
   const t = sc.querySelector('.app-title'), nav = sc.parentNode.querySelector('.navbar');
   if (t && nav) nav.classList.toggle('compact', t.getBoundingClientRect().bottom - 10 < nav.getBoundingClientRect().bottom);
 }
-phone.addEventListener('scroll', e => { if (e.target.dataset && e.target.dataset.key === 'list-scroll') syncNavTitle(e.target); }, true);
+phone.addEventListener('scroll', e => { if (e.target.classList && e.target.classList.contains('scroll')) syncNavTitle(e.target); }, true);
 let carT;
 phone.addEventListener('scroll', e => {
   const c = e.target; if (!c.classList || !c.classList.contains('pin-car')) return;
